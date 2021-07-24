@@ -1,15 +1,17 @@
+# load library ----
+
 library(readxl)
 library(tidyverse)
 
 
-# Obtain data from read file
+# Obtain data from read file ----
 # 
 # 
 je <- read_csv('je.csv', locale=locale('ko',encoding='euc-kr')) 
 View(je)
 
 
-# A01 test : Data Integrity
+# A01 test : Data Integrity ----
 # 
 # 
 colnames(je)
@@ -21,7 +23,7 @@ max(je$JEDATE)
 min(je$JEDATE)
 
 
-# change column name
+# change column name ----
 #
 # 
 # je <- rename(je, JENO = 전표번호,
@@ -32,7 +34,7 @@ min(je$JEDATE)
 # 
 
 
-# A02 Test : Transaction DR/CR
+# A02 Test : Transaction DR/CR ----
 # 
 # 
 A02 <- je |> 
@@ -45,7 +47,7 @@ A02 <- je |>
 A02_Differ <- count(A02[A02$Differ > 0, ])
 
 
-# A03 Test : Trial move Roll-forward Test
+# A03 Test : Trial move Roll-forward Test ----
 # 
 # 
 CYTB <- read_excel('CYTB.xlsx')
@@ -85,7 +87,7 @@ A03$ACCTCD <- as.character(A03$ACCTCD)
 A03 <- left_join(A03, CYTB_move, by = 'ACCTCD')
 
 
-# table(is.na(A03))
+# table(is.na(A03)) ----
 # sapply(A03, function(x) sum(is.na(x)))
 # 
 # A03_NA <- A03[is.na(A03$move),]   
@@ -98,7 +100,7 @@ A03_Differ <- count(A03[A03$Differ > 0, ])
 A03[A03$Differ > 0, ]
 
 
-# B09 Test : Corresponding Accounts Test
+# B09 Test : Corresponding Accounts Test ----
 #
 # 
 Corr_Acc = '40401'
@@ -111,14 +113,14 @@ B09 <- B09 |> filter(!is.na(ACCTCD)) |>
     count(ACCTCD)
 
 
-# 계정코드에 이름 붙이기
+# 계정코드에 이름 붙이기 ----
 # 
 B09_name <- je |> select(ACCTCD, ACCT_NM) # 계정코드 변수명과 계정과목명 변수명 선택
 B09_name <- B09_name[-which(duplicated(B09_name$ACCT_NM)),] # 변수 한개를 기준으로 중복 제거
 B09 <- left_join(B09, B09_name, by = 'ACCTCD')
 
 
-# write file 
+# write file ----
 #
 # 
 A02 |> write_csv('A02.csv')
