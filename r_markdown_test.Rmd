@@ -1,0 +1,267 @@
+---
+title: "R Journal Entry Analysis"
+author: "HHH"
+date: '2021 7 26 '
+output: html_document
+--
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Prerequisite
+   
+[R | 프로그래밍 언어 R 설치하기](https://joy-accounting.netlify.app/2021-07-19-r-install-windows/) 에서와 같이 설치하고 tidyverse 패키지가 정상적으로 설치되었다는 것을 전제하여 다음에 소개하는 Code를  스크립트 창에 조금씩 써보거나 복사해서 붙여 넣는 방식으로 실습한다. 
+   
+## Data 준비하기   
+   
+Rstudio에는 작업 환경을 분할해서 관리할 수 있는 훌륭한 기능이 있다. New Project로 Project를 생성하고 Project를 열어서 작업을 하면 작업 환경이 지정 되고 폴더도 생성되어 그 안에서 독립된 환경을 갖추어 작업 할 수 있다. Alt + f, p 를 눌러서 Project를 생성한다.       
+   
+[다운로드](https://github.com/joy-hhh/R_for_JE_test)
+    
+다운로드 링크에서 우측 상단의 ↓ Code 을 클릭하여 Download ZIP 을 통해서 파일을 다운로드 받는다.  
+   
+다운로드 받은 파일은 압축을 풀어 je.csv, CYTB.xlsx, PYTB.xlsx 세 개의 파일을 생성한 프로젝트 폴더에 옮겨 담는다.  
+
+# 시작
+   
+전체 과정은 R에 파일을 불러와서 작업하고 결과물을 파일로 저장하는 것으로 마친다.  
+   
+## 파일 불러오기 (Data 읽기)
+
+     
+코드 블럭을 설정하거나 프롬프트가 위치한 행에서 'Ctrl + Enter'를 누르면 선택 부분이 Console로 들어가서 실행된다.    
+    
+R은 이 스크립트 창에서 Console에 Code를 던져 주면서 실행하는 맛이 있다.   
+
+      
+
+```{r, eval=TRUE, echo=TRUE, include=TRUE}
+library(tidyverse)  
+
+```
+1. tidyverse 패키지를 불러온다. 이렇게 명시해 주면 tidyverse의 기능을 R에 붙인다고 생각하면 된다.  
+
+
+
+```{r, eval=TRUE, echo=TRUE}
+je <- read_csv('je.csv', locale=locale('ko',encoding='euc-kr'))  
+print(je)  
+
+```
+1. 프로젝트 폴더 경로에 전표 파일을 두고 읽는 명령으로 읽어와서 je라고 이름 붙인다.(이름 붙인 것을 객체라고 한다. je 객체) 윈도우즈 기준의 파일의 경우 파일명 뒤의 encoding 명시를 해주면 글자가 깨지지 않고 읽어온다. 윈도우 기준의 한글 형식에 맞출 수 있다. read_csv 명령 함수는 utf-8 encoding을 기본으로 하기 때문에 한글이 깨질 수 있다. 2기가 정도 되는 data file이 100초 정도 걸린다. (컴퓨터 성능에 따라서 다르다.) 몇십메가 정도의 data file은 몇초가 되기 전에 읽어버린다.[^2]   
+2. 이름 붙인 je 객체를 Console에 나타내 확인한다. 
+    
+[^2]: 원래 utf-8 encoding 형식으로 되어 있는 파일을 , locale=locale('ko',encoding='euc-kr)' 없이 읽으면 훨씬 더 빠르게 읽는다. 파일 형식에 대한 전환 과정이 필요 없기 때문이다. 대용량의 전표를 받아서 test 할 때는 utf-8 encoding 형식으로 요청하는 것도 방법이다.      
+    
+   
+## A01 Data Integrity Test
+     
+```{r, eval=TRUE, echo=TRUE}
+colnames(je)
+str(je)
+table(is.na(je))  
+sapply(je, function(x) sum(is.na(x)))
+
+max(je$JEDATE)
+min(je$JEDATE)
+
+```    
+ 
+1. 읽어온 je의 변수명(열 이름, column명)을 확인한다.  
+2. je의 구조를 파악한다.  
+3. je에 있는 Null 값을 집계한다.  
+4. je의 변수명에 따른 Null값을 각각 집계하여 보여준다.
+5. 전표 일자의 가장 큰 값을 나타낸다.  
+6. 전표 일자의 가장 작은 값을 나타낸다.
+   
+   
+## A02 전표번호 별 차대변 일치검증
+     
+```{r, eval=TRUE, echo=TRUE}    
+A02 <- je |> 
+    select(JENO, DR, CR) |> 
+    mutate_all(~replace(., is.na(.), 0)) |> 
+    group_by(JENO) |> 
+    summarise(DR_sum=sum(DR),
+              CR_sum=sum(CR)) |> 
+    mutate(Differ= DR_sum - CR_sum)
+print(A02)
+A02_Differ <- count(A02[A02$Differ > 0, ])
+print(A02_Differ)
+
+```
+  
+1. 전표번호, 차변금액, 대변금액 열을 선택(select)한다. 선택한 세 개의 열에 Null 값 (NA)이 있으면 0으로 모두 바꾼다.(mutate_all) Null 값(NA)은 계산의 결과가 무조건 NA가 되면서 원하지 않은 불편한 결론을 내기 때문이다. 전표번호별로 묶어서(group_by) 전표번호별 차변의 합계를 DR_sum의 열 이름으로 전표번호별 대변의 합계를 CR_sum의 열 이름으로 정리한다.(summarise) 전표번호별 차변 금액과 대변 금액 합계를 각각 차이를 계산하여 Differ라는 열 이름으로 추가(mutate)한다.     
+2. 전표번호별 차변 금액 합계와 대변 금액 합계의 차이 Differ열의 전체 합계를 계산한다.   
+3. 계산한 차이의 합계를 확인한다.  
+      
+     
+## A03 시산표 Reconciliation 검증(Trial Balance Rollforward Test)
+    
+시산표 검증에는 추가로 시산표 파일에서 Data를 읽어와야 한다.  
+    
+시산표는 엑셀로 되어 있기 쉬우므로 엑셀 파일에서 바로 읽어온다. 전표 파일은 엑셀로 읽으면 csv 파일로 읽어 오는 것보다 훨씬 오래 걸린다. 대용량 Data는 엑셀이 담을 수 있는 행을 넘어버릴 것이므로 애초에 엑셀일 수가 없다. 시산표 정도는 프린터로 종이에 프린트 해도 두세장이면 담아 낼 수 있으므로 엑셀 파일로 바로 읽어도 상관 없다. 명령을 'Ctrl + Enter'로 누르는 즉시 읽어들인다.     
+     
+     
+```{r, eval=TRUE, echo=TRUE}
+if(!require(readxl)){install.packages("readxl");library(readxl)}   
+      
+CYTB <- read_excel('CYTB.xlsx')   
+PYTB <- read_excel('PYTB.xlsx')   
+table(is.na(CYTB))   
+colSums(is.na(CYTB))
+table(is.na(PYTB))   
+colSums(is.na(PYTB))  
+```
+
+1. 엑셀을 읽기 위한 기능을 R에 부착한다. 생김새가 복잡한 이유는 readxl패키지가 설치되어 있지 않은 경우에는 설치하고 이미 설치되어 있는 경우에는 설치하지 않고 불러오라는 의미를 내포하였기 때문이다. 아직 readxl 패키지를 설치하지 않았으므로 바로 library 명령을 썼다가 오류가 나서 놀라서 충격 받지  않기를 바라는 배려이다.  
+2. 엑셀 파일 형태의 당기 시산표를 읽어들인다. (R이 칼질하기 좋게 R의 도마에 올린다.)
+3. 엑셀 파일 형태의 전기 시산표를 읽어들인다.
+4. 당기 시산표의 Null 값을 확인한다.
+5. 당기 시산표의 변수별(열 이름)로 NA 갯수를 확인한다.  
+6. 전기 시산표의 Null 값을 확인한다.
+7. 전기 시산표의 변수별(열 이름)로 NA 갯수를 확인한다.  
+     
+Rstudio의 Powerful한 기능 View로 시산표를 볼 수 있다. 이 기능 때문이라도 Rstudio를 애정한다.  
+    
+```{r, eval=FALSE, echo=TRUE}
+View(CYTB)
+
+```
+    
+아주 자연스럽게 느껴지는 엑셀 같은 화면을 만날 수 있다. 물론 읽기 전용이다. 각 변수(열)에 필터 값으로 함축해 볼 수도 있다. 다른 언어에서 찾아 볼 수 없는 독보적인 기능이다. Rstudio는 시원하게 작업중인 중간에 들여다 볼 수가 있다. 무조건 말로만 해야 하는 것이 아니다. 보면서 해야 한다. 말로 하고 듣기도 하지만 볼수도 있어야 당연하다. 우리는 엑셀에 익숙하므로 즉각적으로 표를 보고 싶다.  View(je) 로 전표 데이터를 볼 수도 있고 환경 창에 있는 변수를 마우스 클릭해도 View() 기능이 작동한다.       
+    
+
+```{r, eval=TRUE, echo=TRUE}   
+CYTB <- drop_na(CYTB, ACCTCD)
+PYTB <- drop_na(PYTB, ACCTCD)
+CYTB_FP <- CYTB[1:99,]
+CYTB_PL <- CYTB[100:length(CYTB$ACCTCD),]
+PYTB_FP <- PYTB[1:103,]
+
+tail(CYTB_FP)
+head(CYTB_PL)
+tail(PYTB_FP)
+
+CYTB_FP <- full_join(CYTB_FP, PYTB_FP, by='ACCTCD') |> 
+    mutate_all(~replace(., is.na(.), 0)) |> 
+    mutate(move = (DRSUM.x - CRSUM.x) -(DRSUM.y - CRSUM.y)) |> 
+    select(ACCTCD, move)
+
+CYTB_PL <- CYTB_PL |> 
+    mutate(move = (DRSUM - CRSUM)) |> 
+    select(ACCTCD, move)
+
+CYTB_move <- bind_rows(CYTB_FP, CYTB_PL)
+    
+```
+  
+1. 결측값(Null, NA)이 ACCTCD 열에 있었으며 결측값 때문에 어려움이 발생할 수 있으므로 결측을 없애고 시작한다.  
+2. 전기 시산표에서도 결측을 없앤다.  
+3. 결측을 없애고 나서 View(CYTB) 기능으로 읽어들인 시산표를 보니 99행이 시산표 중 재무상태표의 마지막 행이다. 시산표의 재무상태표 부분을 나누기 위하여 1행 부터 99행까지를 썰어낸다.(slicing)
+4. 시산표의 손익계산서 부분을 뜯어내기 위하여 100행부터 끝까지 썰어낸다.
+5. 시산표에서 썰어낸 당기재무상태표 하단을 확인한다. 재무상태표 끝단이 썰렸는지 확인.
+6. 시산표에서 썰어낸 당기손익계산서 상단을 확인한다. 손익계산서 시작점부터 썰렸는지 확인.
+7. 전기시산표에서 썰어낸 전기재무상태표 하단을 확인한다. 재무상태표 끝단이 썰렸는지 확인.
+8. 전기 시산표의 재무상태표 부분을 썰어낸다. 전기 시산표가 필요한 이유는 시산표의 재무상태표 부분에는 기초잔액이 포함되어 있다. 전표에는 기초잔액이 포함되어 있지 않고 당기의 변동분만을 포함하고 있다. 만약 전표가 기초 잔액을 포함하고 있다면 이 Code는 수정되어야 할 수도 있다. 일반적으로 전표는 당기 변동을 분개로 포함하고 시산표의 재무상태표 부분은 기초잔액과 당기 변동을 포함하여 잔액이 기말 잔액이 되도록 한다. 기초잔액이 없이는 기말 잔액이 존재할 수 없다.  
+9. 당기시산표에 전기 시산표의 재무상태표 부분을 계정과목별로 맞춰서 붙인다. 이 때 당기시산표에 있는 계정과 전기시산표에 있는 계정이 모두 포함되도록 붙여야 한다. 전기에 변동이 있었으나 당기에 변동이 없었던 항목이 누락되지 않아야 하기 때문이다.   
+10. 시산표의 손익계산서 부분은 당기에 발생한 잔액만 있으면 된다. 재무상태표처럼 기초잔액이라는 개념이 없다.   
+11. 재무상태표의 잔액에서 기초잔액을 제거한 결과와 시산표의 손익계산서 부분의 잔액을 합하여 전표에서 당기에 변동이 있었던 금액을 하나로 붙인다.  
+      
+     
+```{r, eval=TRUE, echo=TRUE}
+A03 <- je |> 
+    select(ACCTCD, DR, CR) |> 
+    mutate_all(~replace(., is.na(.), 0)) |> 
+    group_by(ACCTCD) |> 
+    summarise(DR_sum=sum(DR),
+              CR_sum=sum(CR))
+
+A03$ACCTCD <- as.character(A03$ACCTCD)
+A03 <- left_join(A03, CYTB_move, by = 'ACCTCD')
+
+A03 <- A03 |> mutate_all(~replace(.,is.na(.), 0)) |> 
+    mutate(Differ = (DR_sum - CR_sum - move))
+A03_Differ <- count(A03[A03$Differ > 0, ])
+A03[A03$Differ > 0, ]
+     
+```
+   
+1. 전표에서 계정과목별 차변금액과 대변금액 합계를 계산하여 준비한다.  
+2. 시산표에서 준비한 당기 변동금액(전표에서 계산한 계정과목별 당기 변동 금액)을 전표에서 계산한 차변금액과 대변 금액의 합계에 붙인다.  
+3. 결측값의 갯수를 확인한다.
+4. 변수별 결측값의 갯수를 확인한다.
+5. 결측값을 0으로 바꾸고  전표의 차변합계에서 대변합계를 빼서 당기변동분을 계산하고 시산표에서 계산한 당기변동분을 빼서 차이를 낸다.  
+6. 차이가 0보다 큰 항목 갯수를 세어 A03_Differ 변수로 지정한다.
+7. A03 변수에서 차이가 0보다 큰 항목을 찾아 나타낸다. 이익잉여금 항목 하나만 나타나면 이상이 없다고 생각할 수 있다.     
+
+     
+      
+## B01 매출의 상대계정분석
+         
+```{r, eval=TRUE, echo=TRUE}
+Corr_Acc = '40401'
+B09_main <- je |> filter(ACCTCD == Corr_Acc) |> 
+     select(JENO, ACCTCD)
+B09_Corr <- je |> 
+     select(JENO, ACCTCD)
+B09 <- semi_join(B09_Corr, B09_main, by = 'JENO')
+B09 <- B09 |> filter(!is.na(ACCTCD)) |> 
+     count(ACCTCD)
+```
+
+1. 상대계정분석에서 기준이 되는 본계정코드를 설정한다.  
+2. 전표 데이터에서 본계정이 포함된 전표번호를 필터링(filter)한다. (행 선택)  
+3. 전표 데이터에서 전표번호와 계정코드 열을 선택(select)한다. (열 선택)
+4. 선택한 전표번호와 계정코드에서 본계정이 포함된 전표번호만 남겨서 B09 변수로 지정한다.  
+5. 본계정과 상대계정의 전표 갯수를 세어 B09 변수로 지정한다.  
+   
+View(B09) 명령으로 확인해 보거나 B09를 Console에 쳐서 확인해 볼 수도 있다. 계정코드를 기준으로 본계정과 상대계정들이 모여 있다. 계정과목명이 보이지 않아 보기에 불편하므로 계정과목명을 붙인다.  
+   
+```{r, eval=TRUE, echo=TRUE}
+B09_name <- je |> select(ACCTCD, ACCT_NM) |> distinct() 
+B09 <- left_join(B09, B09_name, by = 'ACCTCD') 
+print(B09)
+
+```
+  
+1. 계정코드와 계정과목명 열을 선택한다. 중복되는 계정과목명을 삭제하고 하나씩만 남긴다.  
+2. 계정코드에 맞는 계정과목명을 B09 에 붙인다.  
+      
+      
+## write file
+      
+R에 파일의 Data를 읽어와서 요리가 되었는데 이 요리의 결과물을 다시 파일로 갖고 싶다. 과정을 거쳐 오면서 결정적 증거물은 메모리에 객체로 꼬리표를 남겨 두었다. 이 객체를 파일로 저장하고 싶다면 다음 명령어들로 할 수 있다.  
+
+```{r, eval=FALSE, echo=TRUE}
+A02 |> write_csv('A02.csv')
+A03 |> write_csv('A03.csv')
+B09 |> write_csv('B09.csv')
+```
+  
+"나는 csv 싫다. 엑셀로 저장할거다." 하는 마음이라면 다음과 같이 하면 된다.   
+      
+```{r, eval=FALSE, echo=TRUE}
+if(!require(writexl)){install.packages("writexl");library(writexl)}  
+
+A02 |> write_xlsx('A02.xlsx')
+A03 |> write_xlsx('A03.xlsx')
+B09 |> write_xlsx('B09.xlsx')
+```
+      
+      
+Coding의 매력은 강력한 재사용성이다. Coding을 하느라 끙끙 앓을 수도 있지만 한번 앓고 나면 그 과정은 내가 아니라 컴퓨터가 한다. 엄청난 속도로 일처리에 부스터를 달고 날아가는 기분이다.   
+      
+반드시 한번 시도해 볼만 하다. 개발자가 되고자 하는 것이 아니다. 컴퓨터를 말로 부려먹는 느낌을 가져보고 싶은 것이다.        
+      
+      
+      
+      
+      
+      
+| 조이회계  Joy Accounting |
+|---------------------------|
+| https://joy-accounting.netlify.com/ |
+  
+  

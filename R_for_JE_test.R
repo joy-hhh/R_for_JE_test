@@ -14,14 +14,15 @@ View(je)
 # A01 test : Data Integrity ----
 # 
 # 
+print(je)
 colnames(je)
 str(je)  
 table(is.na(je))  
-sapply(je, function(x) sum(is.na(x)))  
+colSums(is.na(je))
 
 max(je$JEDATE)
 min(je$JEDATE)
-
+range(je$JEDATE)
 
 # change column name ----
 #
@@ -53,7 +54,9 @@ A02_Differ <- count(A02[A02$Differ > 0, ])
 CYTB <- read_excel('CYTB.xlsx')
 PYTB <- read_excel('PYTB.xlsx')
 table(is.na(CYTB))
-sapply(CYTB, function(x) sum(is.na(x)))  
+colSums(is.na(CYTB))
+colSums(is.na(PYTB))
+
 
 CYTB <- drop_na(CYTB, ACCTCD)
 PYTB <- drop_na(PYTB, ACCTCD)
@@ -113,10 +116,9 @@ B09 <- B09 |> filter(!is.na(ACCTCD)) |>
     count(ACCTCD)
 
 
-# 계정코드에 이름 붙이기 ----
+## 계정코드에 이름 붙이기 ----
 # 
-B09_name <- je |> select(ACCTCD, ACCT_NM) # 계정코드 변수명과 계정과목명 변수명 선택
-B09_name <- B09_name[-which(duplicated(B09_name$ACCT_NM)),] # 변수 한개를 기준으로 중복 제거
+B09_name <- je |> select(ACCTCD, ACCT_NM) |> distinct()  # 계정코드 변수명과 계정과목명 변수명 선택
 B09 <- left_join(B09, B09_name, by = 'ACCTCD')
 
 
