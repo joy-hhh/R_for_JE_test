@@ -2,12 +2,13 @@
 title: "R Journal Entry Analysis"
 author: "HHH"
 date: '2021 7 26 '
-output: html_document
+output: word_document
 ---
 
-```{r setup, include=TRUE}
+```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
 
 # Prerequisite
    
