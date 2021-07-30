@@ -10,6 +10,10 @@ library(tidyverse)
 je <- read_csv('je.csv', locale=locale('ko',encoding='euc-kr')) 
 View(je)
 
+# Obtain data from read url
+#
+# je <- read_csv('https://raw.githubusercontent.com/joy-hhh/R_for_JE_test/main/je.csv', locale = locale('ko',encoding = 'cp949'))
+
 
 # A01 test : Data Integrity ----
 # 
