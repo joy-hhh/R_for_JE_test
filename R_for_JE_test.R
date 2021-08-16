@@ -9,7 +9,7 @@ library(tidyverse)
 # 
 je_raw <- read_csv('je.csv', locale=locale('ko',encoding='euc-kr')) 
 je_raw
-View(je_raw)
+# View(je_raw)
 
 ### Obtain data from read url
 #
@@ -155,7 +155,7 @@ B09 <- left_join(B09, B09_name, by = 'ACCTCD')
 ### write file ----
 #
 # 
-A02 %>% write_csv('A02.csv')
-A03 %>% write_csv('A03.csv')
-B09 %>% write_csv('B09.csv')
+# A02 %>% write_csv('A02.csv')
+# A03 %>% write_csv('A03.csv')
+# B09 %>% write_csv('B09.csv')
     
