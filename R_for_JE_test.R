@@ -35,7 +35,8 @@ range(je_tbl$JEDATE)
 ### use package
 
 library(skimr)
-skim(je)
+skim(je_tbl)
+A01 <- skim(je_tbl)
 
 
 ### change column name ----

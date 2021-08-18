@@ -68,8 +68,9 @@ print(je_raw)
 * Journal Entry data 객체를 Console에 확인  
   
   
-## A01 Data Integrity Test
-
+## A01 Data Integrity Test  
+      
+     
 ```{r, eval=TRUE, echo=TRUE}
 library(skimr)
 je_tbl <- je_raw %>% mutate(JEDATE = ymd(JEDATE))
@@ -79,8 +80,9 @@ skim(je_tbl)
 
 * Data skim 확인
   
-## A02 전표번호 별 차대변 일치검증
-
+## A02 전표번호 별 차대변 일치검증    
+     
+     
 ```{r, eval=TRUE, echo=TRUE}
 A02 <- je_tbl %>%  
     select(JENO, DR, CR) %>%  
@@ -98,8 +100,9 @@ A02 %>% filter(Differ > 0) %>% nrow()
 * 전표번호별 차변 금액 합계와 대변 금액 합계의 차이 Differ열의 전체 합계를 계산한다.   
 * 계산한 차이의 합계를 확인한다.   
    
-## A03 시산표 Reconciliation 검증(Trial Balance Rollforward Test)
-   
+## A03 시산표 Reconciliation 검증(Trial Balance Rollforward Test)  
+     
+     
 시산표 data 준비.   
   
     
@@ -180,8 +183,9 @@ A03 %>% filter(Differ >0)
 * 차이가 0보다 큰 항목 갯수 확인.
 * A03 객체에서 차이가 0보다 큰 항목을 찾아 나타낸다. 이익잉여금 항목 하나만 나타나면 이상이 없다고 생각할 수 있다.
   
-## B01 매출의 상대계정분석
-   
+## B01 매출의 상대계정분석   
+     
+     
 ```{r, eval=TRUE, echo=TRUE}
 Corr_Acc = '40401'
 B09_main <- je_tbl %>% filter(ACCTCD == Corr_Acc) %>% 
@@ -209,10 +213,10 @@ print(B09)
 ```
 * 계정코드와 계정과목명 열을 선택한다. 중복되는 계정과목명을 삭제하고 하나씩만 남긴다.
 * 계정코드에 맞는 계정과목명을 B09 에 붙인다.
-   
-# Conclusion
-   
-전표 분석 결과 정의한 오류 사항이 발견되지 아니함.  
+     
+# Conclusion  
+     
+전표 분석 결과 Step3에서 정의한 오류 사항이 발견되지 아니함.  
     
     
     
