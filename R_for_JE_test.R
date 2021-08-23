@@ -60,7 +60,7 @@ A02 <- je_tbl %>%
     summarise(DR_sum=sum(DR),
               CR_sum=sum(CR)) %>%  
     mutate(Differ= DR_sum - CR_sum)
-A02 %>% filter(Differ > 0) %>% nrow() 
+A02 %>% filter(Differ != 0) %>% nrow() 
 
 
 ### A03 Test : Trial move Roll-forward Test ----
@@ -130,7 +130,7 @@ A03 <- left_join(A03, CYTB_move, by = 'ACCTCD')
 
 A03 <- A03 %>% mutate_all(~replace(.,is.na(.), 0)) %>% 
     mutate(Differ = (DR_sum - CR_sum - move))
-A03 %>% filter(Differ >0)
+A03 %>% filter(Differ != 0)
 
 
 

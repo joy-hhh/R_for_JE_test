@@ -92,7 +92,7 @@ A02 <- je_tbl %>%
               CR_sum=sum(CR)) %>%  
     mutate(Differ= DR_sum - CR_sum)
 A02
-A02 %>% filter(Differ > 0) %>% nrow() 
+A02 %>% filter(Differ != 0) %>% nrow() 
 
 ```
 
@@ -175,7 +175,7 @@ A03 <- left_join(A03, CYTB_move, by = 'ACCTCD')
 
 A03 <- A03 %>% mutate_all(~replace(.,is.na(.), 0)) %>% 
     mutate(Differ = (DR_sum - CR_sum - move))
-A03 %>% filter(Differ >0)
+A03 %>% filter(Differ != 0)
      
 ```
 * 전표에서 계정과목별 차변금액과 대변금액 합계를 계산하여 준비한다.
