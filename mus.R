@@ -1,7 +1,7 @@
 library(tidyverse)
 
 
-je <- read_csv("~/R/R_for_JE_test/je_utf.csv")
+je <- read_csv("https://raw.githubusercontent.com/joy-hhh/R_for_JE_test/main/je_utf.csv")
 sales <- filter(je, ACCTCD == 40401)
 
 
@@ -21,5 +21,6 @@ for (i in seq_along(sales$CR)) {
 }
 
 
+
 test_sample <- sales[sampling,]
-write_excel_csv(test_sample, "test_sample.csv")
+# write_excel_csv(test_sample, "test_sample.csv")
