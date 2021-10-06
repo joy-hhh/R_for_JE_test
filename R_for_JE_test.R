@@ -7,9 +7,22 @@ library(tidyverse)
 ### Obtain data from read file ----
 # 
 # 
-je_raw <- read_csv('je.csv', locale=locale('ko',encoding='euc-kr')) 
+je_raw <- read_csv('je.csv', locale=locale('ko',encoding='euc-kr'))
 je_raw
+
+
 # View(je_raw)
+
+
+### change column name ----
+#
+# 
+# je_tbl <- rename(je_raw, JENO = 전표번호,
+#                          DR = 차변금액,
+#                          CR = 대변금액,
+#                          ACCTCD = 계정코드,
+#                          ACCT_NM = 계정과목명)
+# 
 
 ### Obtain data from read url
 #
@@ -21,6 +34,7 @@ je_raw
 # 
 
 je_tbl <- je_raw %>% mutate(JEDATE = ymd(JEDATE))
+# je_tbl <- je_tbl %>% mutate(JEDATE = ymd(JEDATE))
 # je$JEDATE <- ymd(je$JEDATE)
 
 print(je_tbl)
@@ -38,16 +52,6 @@ library(skimr)
 skim(je_tbl)
 A01 <- skim(je_tbl)
 
-
-### change column name ----
-#
-# 
-# je <- rename(je, JENO = 전표번호,
-#              DR = 차변금액,
-#              CR = 대변금액,
-#              ACCTCD = 계정코드,
-#              ACCT_NM = 계정과목명)
-# 
 
 
 ### A02 Test : Transaction DR/CR ----
