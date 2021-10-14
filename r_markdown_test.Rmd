@@ -1,7 +1,7 @@
 ---
 title: "R Journal Entry Analysis"
 author: "HHH"
-date: '2021 8 19 '
+date: '2021 10 22'
 output: word_document
 editor_options: 
   chunk_output_type: inline
@@ -9,6 +9,7 @@ editor_options:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+options(scipen = 999) # change the number display from scientific notation to the full number in digits
 ```
 
 # Step 1.    테스트 개요 및 목적  
@@ -48,18 +49,20 @@ knitr::opts_chunk$set(echo = TRUE)
   
 # Step 5.    Test 결과   
     
-* readxl, lubridate, tidyverse 패키지를 불러온다. 
+## readxl, lubridate, skimr, tidyverse 패키지를 불러온다. 
    
 ```{r, eval=TRUE, echo=TRUE, include=TRUE}
 library(readxl)
 library(lubridate)
+library(skimr)
 library(tidyverse)
 
 ```
     
     
-* load Journal Entry data
-* Journal Entry data 객체를 Console에 확인  
+## load Journal Entry data
+    
+* Journal Entry data 객체 load 하고 확인  
     
 ```{r, eval=TRUE, echo=TRUE}
 je_raw <- read_csv('je.csv', locale=locale('ko',encoding='euc-kr')) 
@@ -67,36 +70,44 @@ print(je_raw)
 
 ```
    
+
+### 프로그램에 맞추어 열 이름 변경
     
-<!-- * change column name -->
+* change column name
+    
+    
+    
+```{r}
+je_tbl <- rename(je_raw, JEDATE = 전표일자,
+                         JENO = 전표번호,
+                         DR = 차변금액,
+                         CR = 대변금액,
+                         ACCTCD = 계정코드,
+                         ACCT_NM = 계정과목명)
 
-<!-- ```{r} -->
-<!-- je_tbl <- rename(je_raw, JENO = 전표번호, -->
-<!--                         DR = 차변금액, -->
-<!--                         CR = 대변금액, -->
-<!--                         ACCTCD = 계정코드, -->
-<!--                         ACCT_NM = 계정과목명) -->
-
-<!-- ``` -->
+```
 
    
     
-## A01 Data Integrity Test  
+### A01 Data Integrity Test  
     
 * Data skim 확인
     
 ```{r, eval=TRUE, echo=TRUE}
-library(skimr)
-je_tbl <- je_raw %>% mutate(JEDATE = ymd(JEDATE))
+
+je_tbl <- je_tbl %>% mutate(JEDATE = ymd(JEDATE))
 skim(je_tbl)
 
 ```
   
 ## A02 전표번호 별 차대변 일치검증    
      
-* 전표번호, 차변금액, 대변금액 열을 선택(select)한다. 선택한 세 개의 열에 Null 값 (NA)이 있으면 0으로 모두 바꾼다.(mutate_all) Null 값(NA)은 계산의 결과가 무조건 NA가 되면서 원하지 않은 불편한 결론을 내기 때문이다. 전표번호별로 묶어서(group_by) 전표번호별 차변의 합계를 DR_sum의 열 이름으로 전표번호별 대변의 합계를 CR_sum의 열 이름으로 정리한다.(summarise) 전표번호별 차변 금액과 대변 금액 합계를 각각 차이를 계산하여 Differ라는 열 이름으로 추가(mutate)한다.
+* 전표번호, 차변금액, 대변금액 열을 선택(select)한다. 선택한 세 개의 열에 Null 값 (NA)이 있으면 0으로 모두 바꾼다.(mutate_all)    
+전표번호별로 묶어서(group_by) 전표번호별 차변의 합계를 DR_sum의 열 이름으로 전표번호별 대변의 합계를 CR_sum의 열 이름으로 정리한다.(summarise)   
+전표번호별 차변 금액과 대변 금액 합계를 각각 차이를 계산하여 Differ라는 열 이름으로 추가(mutate)한다.   
+    
 * 전표번호별 차변 금액 합계와 대변 금액 합계의 차이 Differ열의 전체 합계를 계산한다.   
-* 계산한 차이의 합계를 확인한다.   
+* 계산한 차이가 0이 아닌 행을 나타낸다.  
     
     
 ```{r, eval=TRUE, echo=TRUE}
@@ -108,7 +119,7 @@ A02 <- je_tbl %>%
               CR_sum=sum(CR)) %>%  
     mutate(Differ= DR_sum - CR_sum)
 print(A02)
-A02 %>% filter(Differ != 0) %>% nrow() 
+A02 %>% filter(Differ != 0)   
     
    
 ```
@@ -117,7 +128,7 @@ A02 %>% filter(Differ != 0) %>% nrow()
 ## A03 시산표 Reconciliation 검증(Trial Balance Rollforward Test)  
      
      
-시산표 data 준비.   
+### 시산표 data 준비.   
    
 * 당기 시산표 불러오기
 * 전기 시산표 불러오기
@@ -132,16 +143,16 @@ colSums(is.na(cytb_raw))
 colSums(is.na(pytb_raw))
 ```
    
-  
-* 결측값(Null, NA)이 ACCTCD 열에 있었으며 결측값 때문에 어려움이 발생할 수 있으므로 결측을 없애고 시작한다.
+   
+* 결측값(Null, NA)이 ACCTCD 열에 있었으며 결측값 때문에 join에 어려움이 발생할 수 있으므로 결측을 없애고 시작한다.
 * 전기 시산표에서도 결측을 없앤다.
-* 결측을 없애고 나서 View(CYTB) 기능으로 읽어들인 시산표를 보니 99행이 시산표 중 재무상태표의 마지막 행이다. 시산표의 재무상태표 부분을 나누기 위하여 1행 부터 99행까지를 썰어낸다.(slice)
-* 시산표의 손익계산서 부분을 뜯어내기 위하여 100행부터 끝까지 썰어낸다.
-* 시산표에서 썰어낸 당기재무상태표 하단을 확인한다. 재무상태표 끝단이 썰렸는지 확인.
-* 시산표에서 썰어낸 당기손익계산서 상단을 확인한다. 손익계산서 시작점부터 썰렸는지 확인.
+* 결측을 없애고 나서 View(CYTB) 기능으로 읽어들인 시산표를 보니 99행이 시산표 중 재무상태표의 마지막 행이다. 시산표의 재무상태표 부분을 나누어 새로운 객체를 생성하기 위하여 1행 부터 99행까지를 썰어낸다.(slice)
+* 시산표의 손익계산서 부분을 뜯어내어 새로운 객체를 생성하기 위하여 100행부터 끝까지 썰어낸다.
+* 시산표에서 썰어낸(slice) 당기재무상태표 하단을 확인한다. 재무상태표 끝단이 썰렸는지 확인.
+* 시산표에서 썰어낸(slice) 당기손익계산서 상단을 확인한다. 손익계산서 시작점부터 썰렸는지 확인.
 * 전기시산표에서 썰어낸 전기재무상태표 하단을 확인한다. 재무상태표 끝단이 썰렸는지 확인.
-* 전기 시산표의 재무상태표 부분 slice  
-* 당기시산표에 전기 시산표의 재무상태표 부분을 계정과목별로 맞춰서 붙인다. 이 때 당기시산표에 있는 계정과 전기시산표에 있는 계정이 모두 포함되도록 붙여야 한다. 전기에 변동이 있었으나 당기에 변동이 없었던 항목이 누락되지 않아야 하기 때문이다.
+* 전기 시산표의 재무상태표 부분 slice   
+* 당기시산표에 전기 시산표의 재무상태표 부분을 계정과목별로 맞춰서 붙인다(join). 이 때 당기시산표에 있는 계정과 전기시산표에 있는 계정이 모두 포함되도록 붙여야 한다. 전기에 변동이 있었으나 당기에 변동이 없었던 항목이 누락되지 않아야 하기 때문이다.
 * 시산표의 손익계산서 부분은 당기에 발생한 잔액만 있으면 된다. 재무상태표처럼 기초잔액이라는 개념이 없다.
 * 재무상태표의 잔액에서 기초잔액을 제거한 결과와 시산표의 손익계산서 부분의 잔액을 합하여 전표에서 당기에 변동이 있었던 금액을 하나로 붙인다.
    
@@ -173,10 +184,11 @@ CYTB_PL <- CYTB_PL %>%
 CYTB_move <- bind_rows(CYTB_FP, CYTB_PL)
     
 ```
+    
 * 전표에서 계정과목별 차변금액과 대변금액 합계를 계산하여 준비한다.
 * 시산표에서 준비한 당기 변동금액(전표에서 계산한 계정과목별 당기 변동 금액)을 전표에서 계산한 차변금액과 대변 금액의 합계에 붙인다.
 * 차이가 0보다 큰 항목 갯수 확인.
-* A03 객체에서 차이가 0보다 큰 항목을 찾아 나타낸다. 이익잉여금 항목 하나만 나타나면 이상이 없다고 생각할 수 있다.
+* A03 객체에서 차이가 0이 아닌 항목을 찾아 나타낸다. 이익잉여금 항목 하나만 나타나면 이 외의 계정은 모두 일치한다.
    
    
 ```{r, eval=TRUE, echo=TRUE}

@@ -2,7 +2,11 @@
 
 library(readxl)
 library(lubridate)
+library(skimr)
 library(tidyverse)
+
+options(scipen = 999)
+
 
 ### Obtain data from read file ----
 # 
@@ -15,14 +19,15 @@ je_raw
 
 
 ### change column name ----
-#
-# 
-# je_tbl <- rename(je_raw, JENO = 전표번호,
-#                          DR = 차변금액,
-#                          CR = 대변금액,
-#                          ACCTCD = 계정코드,
-#                          ACCT_NM = 계정과목명)
-# 
+
+
+je_tbl <- rename(je_raw, JEDATE = 전표일자,
+                         JENO = 전표번호,
+                         DR = 차변금액,
+                         CR = 대변금액,
+                         ACCTCD = 계정코드,
+                         ACCT_NM = 계정과목명)
+colnames(je_tbl)
 
 ### Obtain data from read url
 #
@@ -33,7 +38,7 @@ je_raw
 # 
 # 
 
-je_tbl <- je_raw %>% mutate(JEDATE = ymd(JEDATE))
+je_tbl <- je_tbl %>% mutate(JEDATE = ymd(JEDATE))
 # je_tbl <- je_tbl %>% mutate(JEDATE = ymd(JEDATE))
 # je$JEDATE <- ymd(je$JEDATE)
 
@@ -48,7 +53,6 @@ range(je_tbl$JEDATE)
 
 ### use package
 
-library(skimr)
 skim(je_tbl)
 A01 <- skim(je_tbl)
 
