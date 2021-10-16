@@ -11,9 +11,8 @@ options(scipen = 999)
 ### Obtain data from read file ----
 # 
 # 
-je_raw <- read_csv('je.csv', locale=locale('ko',encoding='euc-kr'))
+je_raw <- read_csv('je_utf_colname.txt')
 je_raw
-
 
 # View(je_raw)
 
@@ -39,8 +38,9 @@ colnames(je_tbl)
 # 
 
 je_tbl <- je_tbl %>% mutate(JEDATE = ymd(JEDATE))
-# je_tbl <- je_tbl %>% mutate(JEDATE = ymd(JEDATE))
-# je$JEDATE <- ymd(je$JEDATE)
+
+je_tbl <- je_raw %>% mutate(JEDATE = ymd(JEDATE))
+
 
 print(je_tbl)
 colnames(je_tbl)
@@ -151,8 +151,7 @@ B09_main <- je_tbl %>% filter(ACCTCD == Corr_Acc) %>%
 B09_Corr <- je_tbl %>% 
     select(JENO, ACCTCD)
 B09 <- semi_join(B09_Corr, B09_main, by = 'JENO')
-B09 <- B09 %>% filter(!is.na(ACCTCD)) %>% 
-    count(ACCTCD)
+B09 <- B09 %>% distinct(ACCTCD)
 
 
 ### 계정코드에 이름 붙이기 ----

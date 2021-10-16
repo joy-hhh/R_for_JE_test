@@ -51,7 +51,7 @@ options(scipen = 999) # change the number display from scientific notation to th
     
 ## readxl, lubridate, skimr, tidyverse 패키지를 불러온다. 
    
-```{r, eval=TRUE, echo=TRUE, include=TRUE}
+```{r, eval=TRUE, echo=FALSE, include=TRUE}
 library(readxl)
 library(lubridate)
 library(skimr)
@@ -65,7 +65,7 @@ library(tidyverse)
 * Journal Entry data 객체 load 하고 확인  
     
 ```{r, eval=TRUE, echo=TRUE}
-je_raw <- read_csv('je.csv', locale=locale('ko',encoding='euc-kr')) 
+je_raw <- read_csv('je_utf_colname.txt') 
 print(je_raw)
 
 ```
