@@ -11,14 +11,26 @@ options(scipen = 999)
 ### Obtain data from read file ----
 # 
 # 
-je_raw <- read_csv('je_utf_colname.txt')
+# je_raw <- read_csv('je_utf_colname.txt')
+
+je_raw <- read_csv('je_utf_colname.txt', col_types = cols(.default = "c"))
 je_raw
+
+
+### windows encoding tsv ----
+# 
+# je_raw_tsv <- read_tsv('1.전표데이터.txt', locale = locale('ko', encoding = 'cp949'))
+# je_raw_tsv
+
+### excel ----
+# 
+# je_raw_xlsx <- read_excel('1.전표데이터.xlsx')
+
 
 # View(je_raw)
 
 
 ### change column name ----
-
 
 je_tbl <- rename(je_raw, JEDATE = 전표일자,
                          JENO = 전표번호,
@@ -28,18 +40,19 @@ je_tbl <- rename(je_raw, JEDATE = 전표일자,
                          ACCT_NM = 계정과목명)
 colnames(je_tbl)
 
-### Obtain data from read url
-#
-# je <- read_csv('https://raw.githubusercontent.com/joy-hhh/R_for_JE_test/main/je.csv', locale = locale('ko',encoding = 'cp949'))
+je_tbl <- mutate(je_tbl, 
+                 DR = as.numeric(gsub("," ,"", DR)),
+                 CR = as.numeric(gsub("," ,"", CR)),
+                 JEDATE = ymd(JEDATE)
+)
+
+# je_tbl <- je_tbl %>% mutate(JEDATE = ymd(JEDATE))
+# je_tbl <- je_raw %>% mutate(JEDATE = ymd(JEDATE))
 
 
 ### A01 test : Data Integrity ----
 # 
 # 
-
-je_tbl <- je_tbl %>% mutate(JEDATE = ymd(JEDATE))
-
-je_tbl <- je_raw %>% mutate(JEDATE = ymd(JEDATE))
 
 
 print(je_tbl)

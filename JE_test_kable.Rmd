@@ -35,25 +35,29 @@ options(scipen = 999) # change the number display from scientific notation to th
 # Step 4.    Test 방법  
   
 * A01 . Data Integrity 검증 - 데이터 유효성을 검증하고, record에 대한 이해를 위한 절차  
-  
+    
 전표 데이터의 회계기간이 당해년도에 포함되는지 여부 검토  
 전표 주요 필드값의 누락 여부 검토를 통한 data integrity 검토  
   
-* A02. 전표번호 별 차대변 일치검증  
+* A02. 전표번호 별 차대변 일치검증   
+   
 전표번호 별 차변금액과 대변금액이 일치하는지 확인하여 전표 데이터의 완전성을 검토  
 차변금액과 대변금액이 일치하지 않을 경우 해당 전표를 추출하여 회사 측과 확인  
-  
-* A03. 시산표 Reconciliation 검증(Trial Balance Rollforward Test)   
+    
+* A03. 시산표 Reconciliation 검증(Trial Balance Rollforward Test)    
+    
 기초 F/S잔액에 수령한 모든 전표의 계정과목 별 합계금액을 반영하여 도출한 기말 F/S 잔액과 회사 제시 F/S와의 일치 여부 검토  
-  
-* B01. 매출의 상대계정분석(매출과 연관성이 낮은 계정이 포함된 비정상적인 거래)  
-매출에 대한 상대계정분석 결과 비정상적으로 처리된 회계처리가 있는지 검토하고 해당 전표 중 특정 금액 이상인 건을 추출하여 검토  
-  
+   
+* B01. 매출의 상대계정분석(매출과 연관성이 낮은 계정이 포함된 비정상적인 거래)    
+   
+매출에 대한 상대계정분석 결과 비정상적으로 처리된 회계처리가 있는지 검토하고 해당 전표 중 특정 금액 이상인 건을 추출하여 검토   
+    
+    
 # Step 5.    Test 결과   
     
-## readxl, lubridate, skimr, tidyverse 패키지를 불러온다. 
+## readxl, lubridate, skimr, tidyverse 패키지를 불러온다.(library) 
    
-```{r, eval=TRUE, echo=FALSE, include=TRUE}
+```{r echo=TRUE, include=FALSE}
 library(readxl)
 library(lubridate)
 library(skimr)
@@ -66,13 +70,14 @@ library(tidyverse)
     
 * Journal Entry data 객체 load 하고 확인  
     
-```{r, eval=TRUE, echo=TRUE}
+```{r, echo=TRUE}
 je_raw <- read_csv('je_utf_colname.txt')
 print(je_raw)
 ```
    
 
-### 프로그램에 맞추어 열 이름 변경
+### 프로그램(하단의 code)에 맞추어 열 이름 변경    
+    
     
 * change column name
     
@@ -119,14 +124,12 @@ A02 <- je_tbl %>%
     mutate(Differ= DR_sum - CR_sum)
 A02 %>% head() %>% 
   kable(
-    booktabs = T,
     position ="!h",
     format.args = list(big.mark = ",", scientific = FALSE)
 )
 
 A02 %>% tail() %>% 
   kable(
-    booktabs = T,
     position ="!h",
     format.args = list(big.mark = ",", scientific = FALSE)
 )
@@ -179,17 +182,14 @@ PYTB_FP <- pytb_tbl %>%
     slice(1:103)
   
 tail(CYTB_FP) %>% kable(
-    booktabs = T,
     position ="!h",
     format.args = list(big.mark = ",", scientific = FALSE)
 )
 head(CYTB_PL) %>% kable(
-    booktabs = T,
     position ="!h",
     format.args = list(big.mark = ",", scientific = FALSE)
 )
 tail(PYTB_FP) %>% kable(
-    booktabs = T,
     position ="!h",
     format.args = list(big.mark = ",", scientific = FALSE)
 )
@@ -229,13 +229,11 @@ A03 <- A03 %>% mutate_all(~replace(.,is.na(.), 0)) %>%
     mutate(Differ = (DR_sum - CR_sum - move))
 
 A03 %>% head() %>% kable(
-    booktabs = T,
     position ="!h",
     format.args = list(big.mark = ",", scientific = FALSE)
 )
 
 A03 %>% tail() %>% kable(
-    booktabs = T,
     position ="!h",
     format.args = list(big.mark = ",", scientific = FALSE)
 )
@@ -277,7 +275,6 @@ B09 <- B09 %>% filter(!is.na(ACCTCD)) %>%
 B09_name <- je_tbl %>% select(ACCTCD, ACCT_NM) %>% distinct()
 B09 <- left_join(B09, B09_name, by = 'ACCTCD')
 B09 %>% kable(
-    booktabs = T,
     position ="!h",
     format.args = list(big.mark = ",", scientific = FALSE)
 )
