@@ -1,7 +1,7 @@
 ### load library ----
 
 library(readxl)
-library(lubridate)
+library(writexl)
 library(skimr)
 library(tidyverse)
 
@@ -46,6 +46,12 @@ je_tbl <- mutate(je_tbl,
                  JEDATE = ymd(JEDATE)
 )
 
+
+je_tbl <- je_tbl %>% mutate(DR = ifelse(is.na(DR), 0, DR),
+                            CR = ifelse(is.na(CR), 0, CR))
+
+
+
 # je_tbl <- je_tbl %>% mutate(JEDATE = ymd(JEDATE))
 # je_tbl <- je_raw %>% mutate(JEDATE = ymd(JEDATE))
 
@@ -55,14 +61,13 @@ je_tbl <- mutate(je_tbl,
 # 
 
 
-print(je_tbl)
-colnames(je_tbl)
-str(je_tbl)  
-colSums(is.na(je_tbl))
-max(je_tbl$JEDATE)
-min(je_tbl$JEDATE)
-range(je_tbl$JEDATE)
-
+# print(je_tbl)
+# colnames(je_tbl)
+# str(je_tbl)  
+# colSums(is.na(je_tbl))
+# max(je_tbl$JEDATE)
+# min(je_tbl$JEDATE)
+# range(je_tbl$JEDATE)
 
 ### use package
 
@@ -180,3 +185,35 @@ B09 <- left_join(B09, B09_name, by = 'ACCTCD')
 # A03 %>% write_csv('A03.csv')
 # B09 %>% write_csv('B09.csv')
     
+
+
+## 벤포드의 법칙
+if(!require(benford.analysis)){install.packages("benford.analysis");library(benford.analysis)}
+
+je_sales <- je_tbl %>% 
+  filter(ACCTCD == '40401')
+
+je_sales$CR %>% benford()
+
+bl <- je_sales$CR %>% benford()
+plot(bl)
+
+suspectsTable(bl)
+getSuspects(bl, je_tbl, how.many=10) 
+
+
+
+
+## Lead Schedule 생성
+
+amt_sum <- je_tbl %>% 
+  summarise(
+    DR_sum = sum(DR),
+    CR_sum = sum(CR),
+    .by = ACCT_NM
+  )
+
+je_tbl %>% 
+  filter(ACCT_NM == "단기금융상품") %>% 
+  View()
+
