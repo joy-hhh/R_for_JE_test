@@ -1,10 +1,12 @@
 ---
 title: "R Journal Entry Analysis"
 author: "HHH"
-date: '2021 10 22'
-output: word_document
+date: '2024 2 20'
+output: 
+  word_document:
+    reference_docx: "template.docx"
 editor_options: 
-  chunk_output_type: inline
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -53,7 +55,7 @@ options(scipen = 999) # change the number display from scientific notation to th
    
 ```{r, eval=TRUE, echo=FALSE, include=TRUE}
 library(readxl)
-library(lubridate)
+library(writexl)
 library(skimr)
 library(tidyverse)
 
@@ -66,7 +68,7 @@ library(tidyverse)
     
 ```{r, eval=TRUE, echo=TRUE}
 je_raw <- read_csv('je_utf_colname.txt') 
-print(je_raw)
+je_raw
 
 ```
    
@@ -95,7 +97,7 @@ je_tbl <- rename(je_raw, JEDATE = 전표일자,
     
 ```{r, eval=TRUE, echo=TRUE}
 
-je_tbl <- je_tbl %>% mutate(JEDATE = ymd(JEDATE))
+je_tbl <- je_tbl |> mutate(JEDATE = ymd(JEDATE))
 skim(je_tbl)
 
 ```
@@ -111,15 +113,17 @@ skim(je_tbl)
     
     
 ```{r, eval=TRUE, echo=TRUE}
-A02 <- je_tbl %>%  
-    select(JENO, DR, CR) %>%  
-    mutate_all(~replace(., is.na(.), 0)) %>%  
-    group_by(JENO) %>% 
+A02 <- je_tbl |>  
+    select(JENO, DR, CR) |>  
+    mutate_all(~replace(., is.na(.), 0)) |>  
+    group_by(JENO) |> 
     summarise(DR_sum=sum(DR),
-              CR_sum=sum(CR)) %>%  
+              CR_sum=sum(CR)) |>  
     mutate(Differ= DR_sum - CR_sum)
+# print(A02)
 print(A02)
-A02 %>% filter(Differ != 0)   
+
+A02 |> filter(Differ != 0)   
     
    
 ```
@@ -161,24 +165,24 @@ colSums(is.na(pytb_raw))
 cytb_tbl <- drop_na(cytb_raw, ACCTCD)
 pytb_tbl <- drop_na(pytb_raw, ACCTCD)
   
-CYTB_FP <- cytb_tbl %>% 
+CYTB_FP <- cytb_tbl |> 
     slice(1:99)
-CYTB_PL <- cytb_tbl %>% 
+CYTB_PL <- cytb_tbl |> 
     slice(100:n())
-PYTB_FP <- pytb_tbl %>% 
+PYTB_FP <- pytb_tbl |> 
     slice(1:103)
   
 tail(CYTB_FP)
 head(CYTB_PL)
 tail(PYTB_FP)
   
-CYTB_FP <- full_join(CYTB_FP, PYTB_FP, by='ACCTCD')  %>%  
-    mutate_all(~replace(., is.na(.), 0)) %>% 
-    mutate(move = (DRSUM.x - CRSUM.x) -(DRSUM.y - CRSUM.y)) %>% 
+CYTB_FP <- full_join(CYTB_FP, PYTB_FP, by='ACCTCD')  |>  
+    mutate_all(~replace(., is.na(.), 0)) |> 
+    mutate(move = (DRSUM.x - CRSUM.x) -(DRSUM.y - CRSUM.y)) |> 
     select(ACCTCD, move)
 
-CYTB_PL <- CYTB_PL %>% 
-    mutate(move = (DRSUM - CRSUM)) %>% 
+CYTB_PL <- CYTB_PL |> 
+    mutate(move = (DRSUM - CRSUM)) |> 
     select(ACCTCD, move)
 
 CYTB_move <- bind_rows(CYTB_FP, CYTB_PL)
@@ -192,23 +196,46 @@ CYTB_move <- bind_rows(CYTB_FP, CYTB_PL)
    
    
 ```{r, eval=TRUE, echo=TRUE}
-A03 <- je_tbl %>% 
-    select(ACCTCD, DR, CR) %>% 
-    mutate_all(~replace(., is.na(.), 0)) %>% 
-    group_by(ACCTCD) %>% 
+A03 <- je_tbl |> 
+    select(ACCTCD, DR, CR) |> 
+    mutate_all(~replace(., is.na(.), 0)) |> 
+    group_by(ACCTCD) |> 
     summarise(DR_sum=sum(DR),
-              CR_sum=sum(CR)) %>% 
-    ungroup() %>%
+              CR_sum=sum(CR)) |> 
+    ungroup() |>
     # join 할때 자료형 일치
     mutate(ACCTCD = as.character(ACCTCD))
 
 A03 <- left_join(A03, CYTB_move, by = 'ACCTCD')
-A03 <- A03 %>% mutate_all(~replace(.,is.na(.), 0)) %>% 
+A03 <- A03 |> mutate_all(~replace(.,is.na(.), 0)) |> 
     mutate(Differ = (DR_sum - CR_sum - move))
+
+ac_name <- je_tbl |> 
+  distinct(ACCTCD, ACCT_NM) |> 
+  mutate(ACCTCD=as.character(ACCTCD))
+
+A03 <- left_join(A03, ac_name, by='ACCTCD')
+
 print(A03)
-A03 %>% filter(Differ != 0)
-    
+
+A03 |> filter(Differ != 0)
 ```
+   
+   
+### Lead Schedule xlsx 생성
+   
+```{r}
+amt_sum <- je_tbl |> 
+  mutate_all(~replace(., is.na(.), 0)) |> 
+  summarise(
+    DR_sum = sum(DR),
+    CR_sum = sum(CR),
+    .by = ACCT_NM
+  ) 
+
+# amt_sum |> write_xlsx("lead_s.xlsx")
+```
+
    
    
 ## B01 매출의 상대계정분석   
@@ -222,12 +249,12 @@ A03 %>% filter(Differ != 0)
     
 ```{r, eval=TRUE, echo=TRUE}
 Corr_Acc = '40401'
-B09_main <- je_tbl %>% filter(ACCTCD == Corr_Acc) %>% 
-    select(JENO, ACCTCD)
-B09_Corr <- je_tbl %>% 
+B09_main <- je_tbl |> filter(ACCTCD == Corr_Acc) |> 
+    select(JENO, ACCTCD, ACCT_NM)
+B09_Corr <- je_tbl |> 
     select(JENO, ACCTCD)
 B09 <- semi_join(B09_Corr, B09_main, by = 'JENO')
-B09 <- B09 %>% filter(!is.na(ACCTCD)) %>% 
+B09 <- B09 |> filter(!is.na(ACCTCD)) |> 
     count(ACCTCD)
 ```
    
@@ -237,11 +264,8 @@ B09 <- B09 %>% filter(!is.na(ACCTCD)) %>%
 * 계정코드와 계정과목명 열을 선택한다. 중복되는 계정과목명을 삭제하고 하나씩만 남긴다.
 * 계정코드에 맞는 계정과목명을 B09 에 붙인다.
     
-    
-   
+
 ```{r, eval=TRUE, echo=TRUE}
-B09_name <- je_tbl %>% select(ACCTCD, ACCT_NM) %>% distinct()
-B09 <- left_join(B09, B09_name, by = 'ACCTCD')
 print(B09)
 
 ```
@@ -256,3 +280,36 @@ print(B09)
 | 조이회계 Joy Accounting               |
 |---------------------------------------|
 | <https://joy-accounting.netlify.com/> |
+
+
+
+
+# Analysis
+
+
+## 벤포드의 법칙
+
+벤포드 분석
+
+```{r}
+if(!require(benford.analysis)){install.packages("benford.analysis");library(benford.analysis)}
+
+je_sales <- je_tbl |>  
+  filter(ACCTCD == '40401')
+
+je_sales$CR |> benford()
+```
+
+벤포드 분석 결과 Plot 확인
+
+```{r}
+bl <- je_sales$CR |> benford()
+plot(bl)
+```
+
+suspectsTable
+
+```{r}
+suspectsTable(bl)
+```
+

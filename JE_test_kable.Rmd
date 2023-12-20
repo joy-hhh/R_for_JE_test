@@ -71,7 +71,7 @@ library(tidyverse)
 * Journal Entry data 객체 load 하고 확인  
     
 ```{r, echo=TRUE}
-je_raw <- read_csv('je_utf.csv')
+je_raw <- read_csv('je_utf_colname.txt')
 print(je_raw)
 ```
    
