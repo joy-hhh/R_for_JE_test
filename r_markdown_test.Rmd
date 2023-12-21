@@ -327,6 +327,7 @@ je_tbl |>
     .by = month
   ) |> ggplot(aes(x=month, y=amount))+
   geom_col()+
+  scale_y_continuous(labels = scales::comma)+
   theme_bw()
 
 ```
@@ -335,16 +336,52 @@ je_tbl |>
 계정과목명 확인
 
 ```{r}
+# 계정과목명 중복 제거해서 나타내기
 je_tbl |> 
   select(ACCT_NM) |> 
   distinct() |> 
   pull()
 
-
+# 계정과목에 해당하는 계정코드 찾기
 je_tbl |> 
   select(ACCTCD, ACCT_NM) |> 
   filter(ACCT_NM == "외상매출금") |> 
   distinct()
 
+```
+
+
+제품매출 거래처 갯수 확인
+
+```{r}
+je_tbl |>
+  filter(ACCT_NM == '제품매출') |> 
+  select(`거래처[코드]`) |> 
+  distinct(`거래처[코드]`) |> 
+  count()
+```
+
+
+```{r}
+if(!require(showtext)){install.packages("showtext");library(showtext)}
+library(showtext)
+font_add("nanum", "NanumGothic.ttf")
+
+
+```
+
+
+
+```{r}
+# 데이터 생성 예시 (날짜와 잔액)
+set.seed(123)
+date <- seq(as.Date("2023-01-01"), by = "month", length.out = 12)
+balance <- cumsum(runif(12, min = -10000, max = 10000))
+data <- data.frame(date = date, amount = balance)
+
+# 선 그래프 그리기
+ggplot(data, aes(x = date, y = amount)) +
+  geom_line(color = "blue") +
+  labs(title = "Balance", x = "date", y = "amount")
 ```
 
