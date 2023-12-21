@@ -310,6 +310,41 @@ plot(bl)
 suspectsTable
 
 ```{r}
-suspectsTable(bl)
+suspectsTable(bl) |> head()
+```
+
+
+## 제품매출 월별 추세 분석
+
+```{r}
+acc = '40401'
+
+je_tbl |> 
+  filter(ACCTCD==acc) |> 
+  mutate(month = as.factor(month(JEDATE))) |> 
+  summarise(
+    amount = sum(CR),
+    .by = month
+  ) |> ggplot(aes(x=month, y=amount))+
+  geom_col()+
+  theme_bw()
+
+```
+
+
+계정과목명 확인
+
+```{r}
+je_tbl |> 
+  select(ACCT_NM) |> 
+  distinct() |> 
+  pull()
+
+
+je_tbl |> 
+  select(ACCTCD, ACCT_NM) |> 
+  filter(ACCT_NM == "외상매출금") |> 
+  distinct()
+
 ```
 
