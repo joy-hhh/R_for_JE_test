@@ -12,6 +12,16 @@ editor_options:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 options(scipen = 999) # change the number display from scientific notation to the full number in digits
+
+
+## 한글 폰트 설정 - 구글 폰트 페이지(https://fonts.google.com/)의 폰트 사용
+if(!require(showtext)){install.packages("showtext");library(showtext)}
+library(showtext)
+# font 등록
+font_add_google(name = "Noto Serif KR",
+                family = "noto-serif")
+# showtext 기능 켜기
+showtext_auto(TRUE)
 ```
 
 # Step 1.    테스트 개요 및 목적  
@@ -66,7 +76,7 @@ library(tidyverse)
     
 * Journal Entry data 객체 load 하고 확인  
     
-```{r, eval=TRUE, echo=TRUE}
+```{r}
 je_raw <- read_csv('je_utf_colname.txt') 
 je_raw
 
@@ -87,6 +97,16 @@ je_tbl <- rename(je_raw, JEDATE = 전표일자,
                          ACCTCD = 계정코드,
                          ACCT_NM = 계정과목명)
 
+je_tbl <- je_tbl |> 
+  mutate(DR = ifelse(is.na(DR), 0, DR),
+         CR = ifelse(is.na(CR), 0, CR),
+         JEDATE = ymd(JEDATE)
+)
+
+je_tbl
+
+sum(je_tbl$DR) == sum(je_tbl$CR)    
+
 ```
 
    
@@ -95,9 +115,8 @@ je_tbl <- rename(je_raw, JEDATE = 전표일자,
     
 * Data skim 확인
     
-```{r, eval=TRUE, echo=TRUE}
+```{r}
 
-je_tbl <- je_tbl |> mutate(JEDATE = ymd(JEDATE))
 skim(je_tbl)
 
 ```
@@ -112,7 +131,7 @@ skim(je_tbl)
 * 계산한 차이가 0이 아닌 행을 나타낸다.  
     
     
-```{r, eval=TRUE, echo=TRUE}
+```{r}
 A02 <- je_tbl |>  
     select(JENO, DR, CR) |>  
     mutate_all(~replace(., is.na(.), 0)) |>  
@@ -124,8 +143,6 @@ A02 <- je_tbl |>
 print(A02)
 
 A02 |> filter(Differ != 0)   
-    
-   
 ```
    
    
@@ -140,7 +157,7 @@ A02 |> filter(Differ != 0)
 * 전기시산표 columns별 결측값 확인
    
     
-```{r, eval=TRUE, echo=TRUE}
+```{r}
 cytb_raw <- read_excel('CYTB.xlsx')
 pytb_raw <- read_excel('PYTB.xlsx')
 colSums(is.na(cytb_raw))
@@ -161,7 +178,7 @@ colSums(is.na(pytb_raw))
 * 재무상태표의 잔액에서 기초잔액을 제거한 결과와 시산표의 손익계산서 부분의 잔액을 합하여 전표에서 당기에 변동이 있었던 금액을 하나로 붙인다.
    
    
-```{r, eval=TRUE, echo=TRUE}
+```{r}
 cytb_tbl <- drop_na(cytb_raw, ACCTCD)
 pytb_tbl <- drop_na(pytb_raw, ACCTCD)
   
@@ -176,16 +193,16 @@ tail(CYTB_FP)
 head(CYTB_PL)
 tail(PYTB_FP)
   
-CYTB_FP <- full_join(CYTB_FP, PYTB_FP, by='ACCTCD')  |>  
+CYTB_FP_move <- full_join(CYTB_FP, PYTB_FP, by='ACCTCD')  |>  
     mutate_all(~replace(., is.na(.), 0)) |> 
     mutate(move = (DRSUM.x - CRSUM.x) -(DRSUM.y - CRSUM.y)) |> 
     select(ACCTCD, move)
 
-CYTB_PL <- CYTB_PL |> 
+CYTB_PL_move <- CYTB_PL |> 
     mutate(move = (DRSUM - CRSUM)) |> 
     select(ACCTCD, move)
 
-CYTB_move <- bind_rows(CYTB_FP, CYTB_PL)
+CYTB_move <- bind_rows(CYTB_FP_move, CYTB_PL_move)
     
 ```
     
@@ -195,7 +212,7 @@ CYTB_move <- bind_rows(CYTB_FP, CYTB_PL)
 * A03 객체에서 차이가 0이 아닌 항목을 찾아 나타낸다. 이익잉여금 항목 하나만 나타나면 이 외의 계정은 모두 일치한다.
    
    
-```{r, eval=TRUE, echo=TRUE}
+```{r}
 A03 <- je_tbl |> 
     select(ACCTCD, DR, CR) |> 
     mutate_all(~replace(., is.na(.), 0)) |> 
@@ -231,9 +248,9 @@ amt_sum <- je_tbl |>
     DR_sum = sum(DR),
     CR_sum = sum(CR),
     .by = ACCT_NM
-  ) 
+  ) |> arrange(ACCT_NM)
 
-# amt_sum |> write_xlsx("lead_s.xlsx")
+amt_sum |> write_xlsx("lead_s.xlsx")
 ```
 
    
@@ -247,7 +264,7 @@ amt_sum <- je_tbl |>
 * 본계정과 상대계정의 전표 갯수를 세어 B09 변수로 지정한다.
     
     
-```{r, eval=TRUE, echo=TRUE}
+```{r}
 Corr_Acc = '40401'
 B09_main <- je_tbl |> filter(ACCTCD == Corr_Acc) |> 
     select(JENO, ACCTCD, ACCT_NM)
@@ -265,7 +282,13 @@ B09 <- B09 |> filter(!is.na(ACCTCD)) |>
 * 계정코드에 맞는 계정과목명을 B09 에 붙인다.
     
 
-```{r, eval=TRUE, echo=TRUE}
+```{r}
+acct_nm <- je_tbl |> 
+  select(ACCTCD, ACCT_NM) |> 
+  distinct()
+
+B09 <- B09 |> left_join(acct_nm, by='ACCTCD')
+
 print(B09)
 
 ```
@@ -314,7 +337,28 @@ suspectsTable(bl) |> head()
 ```
 
 
+
+## 매출액 계정별 비중 확인
+
+```{r}
+CYTB_PL |> 
+  slice(1:5) |> 
+  select(ACCTCD) |> 
+  left_join(ac_name, by = 'ACCTCD') |> 
+  left_join(amt_sum, by = 'ACCT_NM') |> 
+  ggplot(aes(x="", y=CR_sum, fill=ACCT_NM)) +
+    geom_bar(stat="identity", width=1) +
+    coord_polar("y", start=0)+
+    scale_y_continuous(labels = scales::comma)+
+    xlab("") + ylab("금액") + labs(fill="매출 계정")
+```
+
+매출액 계정 중 제품매출의 비중이 가장 크다.
+
+
 ## 제품매출 월별 추세 분석
+
+
 
 ```{r}
 acc = '40401'
@@ -333,25 +377,27 @@ je_tbl |>
 ```
 
 
-계정과목명 확인
+
+## 계정과목명 확인
 
 ```{r}
-# 계정과목명 중복 제거해서 나타내기
-je_tbl |> 
-  select(ACCT_NM) |> 
-  distinct() |> 
-  pull()
+# 계정과목명 중복 제거해서 나타내기 - 당기 중 변동이 있는 계정만 나타남
+je_tbl |>
+  select(ACCT_NM) |>
+  distinct() |>
+  pull() # tibble을 벡터로 변환
 
 # 계정과목에 해당하는 계정코드 찾기
-je_tbl |> 
-  select(ACCTCD, ACCT_NM) |> 
-  filter(ACCT_NM == "외상매출금") |> 
+je_tbl |>
+  select(ACCTCD, ACCT_NM) |>
+  filter(ACCT_NM == "외상매출금") |>
   distinct()
 
 ```
 
 
-제품매출 거래처 갯수 확인
+
+## 제품매출 거래처 갯수 확인
 
 ```{r}
 je_tbl |>
@@ -362,18 +408,64 @@ je_tbl |>
 ```
 
 
+
+## 원재료비 월별 추세 분석
+
 ```{r}
-if(!require(showtext)){install.packages("showtext");library(showtext)}
-library(showtext)
-font_add("nanum", "NanumGothic.ttf")
+acc = '50100'
+
+je_tbl |> 
+  filter(ACCTCD==acc) |> 
+  mutate(month = as.factor(month(JEDATE))) |> 
+  summarise(
+    amount = sum(DR),
+    .by = month
+  ) |> ggplot(aes(x=month, y=amount))+
+  geom_col()+
+  scale_y_continuous(labels = scales::comma)+
+  theme_bw()
+```
+
+
+
+## 판매관리비
+
+```{r}
+판관비_계정 <- cytb_tbl |> 
+  slice(166:191) |> 
+  select(ACCTCD) |> 
+  mutate(ACCTCD = as.numeric(ACCTCD))
+  
+판관비 <- 판관비_계정 |> left_join(acct_nm, by='ACCTCD') |> 
+  left_join(amt_sum, by='ACCT_NM') |> 
+  mutate(ratio = prop.table(DR_sum))
+
+
+판관비 |> print(n=Inf)
+
+
+판관_계정명 <- 판관비 |> 
+  select(ACCT_NM) |> 
+  pull()
+
+je_tbl |> 
+  filter(ACCT_NM %in% 판관_계정명) |> 
+  mutate(month = as.factor(month(JEDATE))) |> 
+  summarise(
+    ACCT_NM,
+    amount = sum(DR),
+    .by = month
+  )
 
 
 ```
 
 
 
+
 ```{r}
-# 데이터 생성 예시 (날짜와 잔액)
+
+
 set.seed(123)
 date <- seq(as.Date("2023-01-01"), by = "month", length.out = 12)
 balance <- cumsum(runif(12, min = -10000, max = 10000))
@@ -382,6 +474,14 @@ data <- data.frame(date = date, amount = balance)
 # 선 그래프 그리기
 ggplot(data, aes(x = date, y = amount)) +
   geom_line(color = "blue") +
-  labs(title = "Balance", x = "date", y = "amount")
+  labs(title = "규모", x = "날짜", y = "잔액")+
+  theme(
+    text = element_text(
+        family = "noto-serif",
+        size   = 14
+    )
+  )
 ```
+
+
 
