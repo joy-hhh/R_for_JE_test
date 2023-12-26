@@ -330,11 +330,12 @@ bl <- je_sales$CR |> benford()
 plot(bl)
 ```
 
-suspectsTable
 
-```{r}
-suspectsTable(bl) |> head()
-```
+<!-- suspectsTable -->
+
+<!-- ```{r} -->
+<!-- suspectsTable(bl) |> head() -->
+<!-- ``` -->
 
 
 
@@ -356,43 +357,81 @@ CYTB_PL |>
 매출액 계정 중 제품매출의 비중이 가장 크다.
 
 
-## 제품매출 월별 추세 분석
+## 매출 월별 추세 분석
 
 
+제품매출 월별 추세 분석
 
 ```{r}
 acc = '40401'
 
+trend <- \(acc){
+  je_tbl |> 
+    filter(ACCTCD %in% acc) |> 
+    mutate(month = as.factor(month(JEDATE))) |> 
+    summarise(
+      amount = sum(CR),
+      .by = month
+    ) |> ggplot(aes(x=month, y=amount))+
+    geom_col()+
+    scale_y_continuous(labels = scales::comma)+
+    theme_bw()
+}
+```
+
+
+```{r}
+trend(acc)
+```
+
+
+상품매출 월별 추세 분석
+
+```{r}
+acc <- "40100"
+trend(acc)
+```
+
+
+교육 수입 월별 추세 분석
+
+```{r}
+acc <- "40700"
+trend(acc)
+```
+
+
+총 매출 계정별 월별 추세 분석 - bar plot (stack)
+
+```{r}
+acc <- c("40100", "40401", "40700", "41100", "41200")
+
 je_tbl |> 
-  filter(ACCTCD==acc) |> 
-  mutate(month = as.factor(month(JEDATE))) |> 
-  summarise(
-    amount = sum(CR),
-    .by = month
-  ) |> ggplot(aes(x=month, y=amount))+
-  geom_col()+
-  scale_y_continuous(labels = scales::comma)+
-  theme_bw()
+    filter(ACCTCD %in% acc) |> 
+    mutate(ACCTCD = as.factor(ACCTCD)) |> 
+    mutate(month = as.factor(month(JEDATE))) |> 
+    summarise(
+      amount = sum(CR),
+      .by = c(ACCTCD, month)
+    ) |> 
+    ggplot(aes(x=month, y=amount, fill=ACCTCD))+
+    geom_bar(position='stack', stat = "sum")+
+    scale_y_continuous(labels = scales::comma)+
+    theme_bw()
 
 ```
 
 
-
-## 계정과목명 확인
+총 매출 계정별 box plot - 수치형 변수의 범주별 통계요약
 
 ```{r}
-# 계정과목명 중복 제거해서 나타내기 - 당기 중 변동이 있는 계정만 나타남
-je_tbl |>
-  select(ACCT_NM) |>
-  distinct() |>
-  pull() # tibble을 벡터로 변환
+acc <- c("40100", "40401", "40700", "41100", "41200")
 
-# 계정과목에 해당하는 계정코드 찾기
-je_tbl |>
-  select(ACCTCD, ACCT_NM) |>
-  filter(ACCT_NM == "외상매출금") |>
-  distinct()
-
+je_tbl |> 
+  filter(ACCTCD %in% acc) |> 
+  mutate(ACCTCD = as.factor(ACCTCD)) |> 
+  ggplot(aes(x=ACCTCD, y=CR))+
+    geom_boxplot()
 ```
 
 
@@ -459,6 +498,43 @@ je_tbl |>
 
 
 ```
+
+
+
+## 계정과목명 확인
+
+```{r}
+# 계정과목명 중복 제거해서 나타내기 - 당기 중 변동이 있는 계정만 나타남
+acctnm <- je_tbl |>
+  select(ACCT_NM) |>
+  distinct() |>
+  pull()    # tibble을 벡터로 변환
+
+acctnm
+
+
+# 계정과목에 해당하는 계정코드 찾기
+je_tbl |>
+  select(ACCTCD, ACCT_NM) |>
+  filter(ACCT_NM == "외상매출금") |>
+  distinct()
+
+```
+
+
+## 분개장 전표에서 계정별 원장 추출
+
+```{r}
+je_tbl |> 
+  filter(ACCT_NM %in% acctnm[1])
+
+
+```
+
+
+
+
+
 
 
 
