@@ -98,13 +98,13 @@ je_tbl <- rename(je_raw, JEDATE = 전표일자,
                          ACCTCD = 계정코드,
                          ACCT_NM = 계정과목명)
 
-je_tbl <- je_tbl |> 
-  mutate(DR = ifelse(is.na(DR), 0, DR),
-         CR = ifelse(is.na(CR), 0, CR),
-         JEDATE = ymd(JEDATE)
+je_tbl <- je_tbl %>% 
+  mutate(across(DR:CR, \(x) ifelse(is.na(x), 0, x)),
+         JEDATE = ymd(JEDATE),
+         month = as_factor(month(JEDATE)),
+         ACCTCD = as_factor(ACCTCD),
+         JENO = as.character(JENO)
 )
-
-je_tbl
 
 sum(je_tbl$DR) == sum(je_tbl$CR)    
 
@@ -133,17 +133,17 @@ skim(je_tbl)
     
     
 ```{r}
-A02 <- je_tbl |>  
-    select(JENO, DR, CR) |>  
-    mutate_all(~replace(., is.na(.), 0)) |>  
-    group_by(JENO) |> 
+A02 <- je_tbl %>%  
+    select(JENO, DR, CR) %>%  
+    # mutate_all(~replace(., is.na(.), 0)) %>%  
+    group_by(JENO) %>% 
     summarise(DR_sum=sum(DR),
-              CR_sum=sum(CR)) |>  
+              CR_sum=sum(CR)) %>%  
     mutate(Differ= DR_sum - CR_sum)
 # print(A02)
 print(A02)
 
-A02 |> filter(Differ != 0)   
+A02 %>% filter(Differ != 0)   
 ```
    
    
@@ -183,24 +183,24 @@ colSums(is.na(pytb_raw))
 cytb_tbl <- drop_na(cytb_raw, ACCTCD)
 pytb_tbl <- drop_na(pytb_raw, ACCTCD)
   
-CYTB_FP <- cytb_tbl |> 
+CYTB_FP <- cytb_tbl %>% 
     slice(1:99)
-CYTB_PL <- cytb_tbl |> 
+CYTB_PL <- cytb_tbl %>% 
     slice(100:n())
-PYTB_FP <- pytb_tbl |> 
+PYTB_FP <- pytb_tbl %>% 
     slice(1:103)
   
 tail(CYTB_FP)
 head(CYTB_PL)
 tail(PYTB_FP)
   
-CYTB_FP_move <- full_join(CYTB_FP, PYTB_FP, by='ACCTCD')  |>  
-    mutate_all(~replace(., is.na(.), 0)) |> 
-    mutate(move = (DRSUM.x - CRSUM.x) -(DRSUM.y - CRSUM.y)) |> 
+CYTB_FP_move <- full_join(CYTB_FP, PYTB_FP, by='ACCTCD')  %>%  
+    mutate_all(~replace(., is.na(.), 0)) %>% 
+    mutate(move = (DRSUM.x - CRSUM.x) -(DRSUM.y - CRSUM.y)) %>% 
     select(ACCTCD, move)
 
-CYTB_PL_move <- CYTB_PL |> 
-    mutate(move = (DRSUM - CRSUM)) |> 
+CYTB_PL_move <- CYTB_PL %>% 
+    mutate(move = (DRSUM - CRSUM)) %>% 
     select(ACCTCD, move)
 
 CYTB_move <- bind_rows(CYTB_FP_move, CYTB_PL_move)
@@ -214,44 +214,44 @@ CYTB_move <- bind_rows(CYTB_FP_move, CYTB_PL_move)
    
    
 ```{r}
-A03 <- je_tbl |> 
-    select(ACCTCD, DR, CR) |> 
-    mutate_all(~replace(., is.na(.), 0)) |> 
-    group_by(ACCTCD) |> 
+A03 <- je_tbl %>% 
+    select(ACCTCD, DR, CR) %>% 
+    mutate_all(~replace(., is.na(.), 0)) %>% 
+    group_by(ACCTCD) %>% 
     summarise(DR_sum=sum(DR),
-              CR_sum=sum(CR)) |> 
-    ungroup() |>
+              CR_sum=sum(CR)) %>% 
+    ungroup() %>%
     # join 할때 자료형 일치
     mutate(ACCTCD = as.character(ACCTCD))
 
 A03 <- left_join(A03, CYTB_move, by = 'ACCTCD')
-A03 <- A03 |> mutate_all(~replace(.,is.na(.), 0)) |> 
+A03 <- A03 %>% mutate_all(~replace(.,is.na(.), 0)) %>% 
     mutate(Differ = (DR_sum - CR_sum - move))
 
-ac_name <- je_tbl |> 
-  distinct(ACCTCD, ACCT_NM) |> 
+ac_name <- je_tbl %>% 
+  distinct(ACCTCD, ACCT_NM) %>% 
   mutate(ACCTCD=as.character(ACCTCD))
 
 A03 <- left_join(A03, ac_name, by='ACCTCD')
 
 print(A03)
 
-A03 |> filter(Differ != 0)
+A03 %>% filter(Differ != 0)
 ```
    
    
 ### Lead Schedule xlsx 생성
    
 ```{r}
-amt_sum <- je_tbl |> 
-  mutate_all(~replace(., is.na(.), 0)) |> 
+amt_sum <- je_tbl %>% 
+  mutate_all(~replace(., is.na(.), 0)) %>% 
   summarise(
     DR_sum = sum(DR),
     CR_sum = sum(CR),
     .by = ACCT_NM
-  ) |> arrange(ACCT_NM)
+  ) %>% arrange(ACCT_NM)
 
-amt_sum |> write_xlsx("lead_s.xlsx")
+amt_sum %>% write_xlsx("lead_s.xlsx")
 ```
 
    
@@ -266,12 +266,12 @@ amt_sum |> write_xlsx("lead_s.xlsx")
     
 ```{r}
 Corr_Acc = '40401'
-B09_main <- je_tbl |> filter(ACCTCD == Corr_Acc) |> 
+B09_main <- je_tbl %>% filter(ACCTCD == Corr_Acc) %>% 
     select(JENO, ACCTCD, ACCT_NM)
-B09_Corr <- je_tbl |> 
+B09_Corr <- je_tbl %>% 
     select(JENO, ACCTCD)
 B09 <- semi_join(B09_Corr, B09_main, by = 'JENO')
-B09 <- B09 |> filter(!is.na(ACCTCD)) |> 
+B09 <- B09 %>% filter(!is.na(ACCTCD)) %>% 
     count(ACCTCD)
 ```
    
@@ -283,11 +283,11 @@ B09 <- B09 |> filter(!is.na(ACCTCD)) |>
     
 
 ```{r}
-acct_nm <- je_tbl |> 
-  select(ACCTCD, ACCT_NM) |> 
+acct_nm <- je_tbl %>% 
+  select(ACCTCD, ACCT_NM) %>% 
   distinct()
 
-B09 <- B09 |> left_join(acct_nm, by='ACCTCD')
+B09 <- B09 %>% left_join(acct_nm, by='ACCTCD')
 
 print(B09)
 
@@ -304,7 +304,7 @@ print(B09)
     
 
 
-# Analysis
+# 이 외의 Analysis
 
 
 ## 벤포드의 법칙
@@ -314,16 +314,16 @@ print(B09)
 ```{r}
 if(!require(benford.analysis)){install.packages("benford.analysis");library(benford.analysis)}
 
-je_sales <- je_tbl |>  
+je_sales <- je_tbl %>%  
   filter(ACCTCD == '40401')
 
-je_sales$CR |> benford()
+je_sales$CR %>% benford()
 ```
 
 * 벤포드 분석 결과 Plot 확인
 
 ```{r}
-bl <- je_sales$CR |> benford()
+bl <- je_sales$CR %>% benford()
 plot(bl)
 ```
 
@@ -331,7 +331,7 @@ plot(bl)
 <!-- suspectsTable -->
 
 <!-- ```{r} -->
-<!-- suspectsTable(bl) |> head() -->
+<!-- suspectsTable(bl) %>% head() -->
 <!-- ``` -->
 
 
@@ -339,11 +339,11 @@ plot(bl)
 ## 매출액 계정별 비중 확인
 
 ```{r}
-CYTB_PL |> 
-  slice(1:5) |> 
-  select(ACCTCD) |> 
-  left_join(ac_name, by = 'ACCTCD') |> 
-  left_join(amt_sum, by = 'ACCT_NM') |> 
+CYTB_PL %>% 
+  slice(1:5) %>% 
+  select(ACCTCD) %>% 
+  left_join(ac_name, by = 'ACCTCD') %>% 
+  left_join(amt_sum, by = 'ACCT_NM') %>% 
   ggplot(aes(x="", y=CR_sum, fill=ACCT_NM)) +
     geom_bar(stat="identity", width=1) +
     coord_polar("y", start=0)+
@@ -363,13 +363,12 @@ CYTB_PL |>
 acc = '40401'
 
 trend <- \(acc){
-  je_tbl |> 
-    filter(ACCTCD %in% acc) |> 
-    mutate(month = as.factor(month(JEDATE))) |> 
+  je_tbl %>% 
+    filter(ACCTCD %in% acc) %>% 
     summarise(
       amount = sum(CR),
       .by = month
-    ) |> ggplot(aes(x=month, y=amount))+
+    ) %>% ggplot(aes(x=month, y=amount))+
     geom_col()+
     scale_y_continuous(labels = scales::comma)+
     theme_bw()
@@ -403,14 +402,12 @@ trend(acc)
 ```{r}
 acc <- c("40100", "40401", "40700", "41100", "41200")
 
-je_tbl |> 
-    filter(ACCTCD %in% acc) |> 
-    mutate(ACCTCD = as.factor(ACCTCD)) |> 
-    mutate(month = as.factor(month(JEDATE))) |> 
+je_tbl %>% 
+    filter(ACCTCD %in% acc) %>% 
     summarise(
       amount = sum(CR),
       .by = c(ACCTCD, month)
-    ) |> 
+    ) %>% 
     ggplot(aes(x=month, y=amount, fill=ACCTCD))+
     geom_bar(position='stack', stat = "sum")+
     scale_y_continuous(labels = scales::comma)+
@@ -424,9 +421,9 @@ je_tbl |>
 ```{r}
 acc <- c("40100", "40401", "40700", "41100", "41200")   # 매출 계정 모음
 
-je_tbl |> 
-  filter(ACCTCD %in% acc) |> 
-  mutate(ACCTCD = as.factor(ACCTCD)) |> 
+je_tbl %>% 
+  filter(ACCTCD %in% acc) %>% 
+  mutate(ACCTCD = as.factor(ACCTCD)) %>% 
   ggplot(aes(x=ACCTCD, y=CR))+
     geom_boxplot()
 ```
@@ -435,10 +432,10 @@ je_tbl |>
 ## 제품매출 거래처 갯수 확인
 
 ```{r}
-je_tbl |>
-  filter(ACCT_NM == '제품매출') |> 
-  select(`거래처[코드]`) |> 
-  distinct(`거래처[코드]`) |> 
+je_tbl %>%
+  filter(ACCT_NM == '제품매출') %>% 
+  select(`거래처[코드]`) %>% 
+  distinct(`거래처[코드]`) %>% 
   count()
 ```
 
@@ -448,13 +445,13 @@ je_tbl |>
 ```{r}
 acc = '50100'
 
-je_tbl |> 
-  filter(ACCTCD==acc) |> 
-  mutate(month = as.factor(month(JEDATE))) |> 
+je_tbl %>% 
+  filter(ACCTCD==acc) %>% 
+  mutate(month = as.factor(month(JEDATE))) %>% 
   summarise(
     amount = sum(DR),
     .by = month
-  ) |> ggplot(aes(x=month, y=amount))+
+  ) %>% ggplot(aes(x=month, y=amount))+
   geom_col()+
   scale_y_continuous(labels = scales::comma)+
   theme_bw()
@@ -479,14 +476,14 @@ mus_sampling <- \(SR, RC, PL, PM, EA, pop){
                      "No",                 "Yes",     0,         0,  0.3,                                  0.5
         )
     
-    assurance_factor <- assurance_factor_raw |> 
+    assurance_factor <- assurance_factor_raw %>% 
         pivot_longer(
         cols = c(High, Moderate, Low, Analytical.Procedures.Not.Performed),
         names_to = "Planned_Level",  # Planned Level of Assurance from Substantive Analytical Procedures
         values_to = "Assurance_Factor"
         )
     
-    assurance_factor <- assurance_factor |>
+    assurance_factor <- assurance_factor %>%
         filter(
             Significant.Risk == SR,
             Reliance.on.Controls == RC,
@@ -498,38 +495,38 @@ mus_sampling <- \(SR, RC, PL, PM, EA, pop){
     sampling_interval = (PM - EA) / AF
     
     ## Consideration of Zero or Negative Amounts
-    pop <- pop |> 
+    pop <- pop %>% 
       filter(amount > 0)
     
     ## High Value
-    high_value_items <- pop |> 
+    high_value_items <- pop %>% 
       filter(amount >= PM)
     
-    pop_remain <- pop |> 
+    pop_remain <- pop %>% 
       filter(amount < PM)
     
     ## Expected Sample Size = (Population Subject to Sampling X Assurance Factor) / (Tolerable Misstatement – Expected Misstatement)
-    pop_amount <- pop_remain$amount |> sum()
+    pop_amount <- pop_remain$amount %>% sum()
     sample_size <- round(pop_amount * AF / (PM- EA))
     
     sampling_row <- seq(sample_size)    
     sampling_n <- seq(sample_size) * sampling_interval
     
-    pop_remain <- pop_remain |> 
+    pop_remain <- pop_remain %>% 
         mutate(cum = cumsum(amount))
     
     for (i in seq_along(sampling_n)) {
         sampling_row[i] <- which(pop_remain$cum > sampling_n[i])[1]
     }
     
-    sampling_row <- sampling_row |> unique()
+    sampling_row <- sampling_row %>% unique()
     
     ## 샘플링 객체 생성
-    sampling_remain <- pop_remain |> 
-      select(-cum) |> 
+    sampling_remain <- pop_remain %>% 
+      select(-cum) %>% 
       slice(sampling_row)
     
-    sampling <<- high_value_items |> 
+    sampling <<- high_value_items %>% 
       bind_rows(sampling_remain)
 }
 ```
@@ -554,9 +551,9 @@ EA <- PM * 0.05    ## Expected misstatement
 ## Population
 acc <- c("40100", "40401", "40700", "41100", "41200")  # 매출 계정 모음
 
-pop <- je_tbl |> 
-  rename(amount = CR) |>    # mus_sampling 함수 실행을 위하여 금액 열 이름을 amount로 변경.
-  filter(ACCTCD %in% acc) |> 
+pop <- je_tbl %>% 
+  rename(amount = CR) %>%    # mus_sampling 함수 실행을 위하여 금액 열 이름을 amount로 변경.
+  filter(ACCTCD %in% acc) %>% 
   mutate(JENO = as.character(JENO))
 
 ## 함수 실행
@@ -567,7 +564,7 @@ print(sampling, n = Inf)
 
 
 ## 추출된 샘플 엑셀 파일 생성
-sampling |> write_xlsx("sample.xlsx")
+sampling %>% write_xlsx("sample.xlsx")
 
 ```
 
