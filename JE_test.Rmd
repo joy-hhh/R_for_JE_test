@@ -574,15 +574,11 @@ sampling %>% write_xlsx("sample.xlsx")
 ```{r}
 acc <- c("40100", "40401", "40700", "41100", "41200")
 
-gl <- je_tbl %>% 
+je_tbl %>% 
   filter(ACCTCD %in% acc) %>%
-  split(.$ACCT_NM)
-
-write_xlsx(gl, path = "gl.xlsx")
-
+  split(.$ACCT_NM) %>% 
+  write_xlsx(path = "revenue_gl.xlsx")
 ```
-
-
 
 
 
