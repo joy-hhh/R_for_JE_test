@@ -24,6 +24,7 @@ font_add_google(name = "Noto Serif KR",
 showtext_auto(TRUE)
 ```
 
+
 # Step 1.    테스트 개요 및 목적  
   
   
@@ -58,7 +59,7 @@ showtext_auto(TRUE)
   
 * B01. 매출의 상대계정분석(매출과 연관성이 낮은 계정이 포함된 비정상적인 거래)  
 매출에 대한 상대계정분석 결과 비정상적으로 처리된 회계처리가 있는지 검토하고 해당 전표 중 특정 금액 이상인 건을 추출하여 검토  
-  
+
 # Step 5.    Test 결과   
     
 ## Test 준비
@@ -106,8 +107,7 @@ je_tbl <- je_tbl %>%
          JENO = as.character(JENO)
 )
 
-sum(je_tbl$DR) == sum(je_tbl$CR)    
-
+sum(je_tbl$DR) == sum(je_tbl$CR)
 ```
 
 
@@ -288,9 +288,12 @@ acct_nm <- je_tbl %>%
   distinct()
 
 B09 <- B09 %>% left_join(acct_nm, by='ACCTCD')
+```
 
+* 제품매출의 상대계정에 어울리지 않는 계정과목이 있는지 확인한다.  
+
+```{r}
 print(B09)
-
 ```
 
     
@@ -326,13 +329,6 @@ je_sales$CR %>% benford()
 bl <- je_sales$CR %>% benford()
 plot(bl)
 ```
-
-
-<!-- suspectsTable -->
-
-<!-- ```{r} -->
-<!-- suspectsTable(bl) %>% head() -->
-<!-- ``` -->
 
 
 
@@ -464,83 +460,16 @@ je_tbl %>%
 ```
 
 
-## 매출액 MUS(Monetary Unit Selection) Sampling
+## 매출액 MUS(Monetary Unit Selection) Sampling - E/O
 
-* MUS Sampling 함수 정의
+* MUS Sampling 함수 설치 및 library Load
 
 ```{r}
-## MUS sampling 함수 생성
-mus_sampling <- \(SR, RC, PL, PM, EA, pop, am){
-  
-  # mus_sampling 함수 실행을 위하여 금액 열 이름을 amount로 변경.
-  if(am != 'amount'){
-    pop <- pop %>% 
-      rename('amount' = all_of(am))
-  }
-  
-    ## Assurance Factor 산정
-    
-    assurance_factor_raw <- tibble::tribble(
-        ~Significant.Risk, ~Reliance.on.Controls, ~High, ~Moderate, ~Low, ~Analytical.Procedures.Not.Performed,
-                    "Yes",                  "No",   1.1,       1.6,  2.8,                                    3,
-                     "No",                  "No",     0,       0.5,  1.7,                                  1.9,
-                    "Yes",                 "Yes",     0,       0.2,  1.4,                                  1.6,
-                     "No",                 "Yes",     0,         0,  0.3,                                  0.5
-        )
-    
-    assurance_factor <- assurance_factor_raw %>% 
-        pivot_longer(
-        cols = c(High, Moderate, Low, Analytical.Procedures.Not.Performed),
-        names_to = "Planned_Level",  # Planned Level of Assurance from Substantive Analytical Procedures
-        values_to = "Assurance_Factor"
-        )
-    
-    assurance_factor <- assurance_factor %>%
-        filter(
-            Significant.Risk == SR,
-            Reliance.on.Controls == RC,
-            Planned_Level == PL
-        )
-    AF <- assurance_factor[[1,4]]
-    
-    ## Sampling Interval = (Tolerable Misstatement – Expected Misstatement) / Assurance Factor
-    sampling_interval = (PM - EA) / AF
-    
-    ## Consideration of Zero or Negative Amounts
-    pop <- pop %>% 
-      filter(amount > 0)
-    
-    ## High Value
-    high_value_items <- pop %>% 
-      filter(amount >= PM)
-    
-    pop_remain <- pop %>% 
-      filter(amount < PM)
-    
-    ## Expected Sample Size = (Population Subject to Sampling X Assurance Factor) / (Tolerable Misstatement – Expected Misstatement)
-    pop_amount <- pop_remain$amount %>% sum()
-    sample_size <- round(pop_amount * AF / (PM- EA))
-    
-    sampling_row <- seq(sample_size)    
-    sampling_n <- seq(sample_size) * sampling_interval
-    
-    pop_remain <- pop_remain %>% 
-        mutate(cum = cumsum(amount))
-    
-    for (i in seq_along(sampling_n)) {
-        sampling_row[i] <- which(pop_remain$cum > sampling_n[i])[1]
-    }
-    
-    sampling_row <- sampling_row %>% unique()
-    
-    ## 샘플링 객체 생성
-    sampling_remain <- pop_remain %>% 
-      select(-cum) %>% 
-      slice(sampling_row)
-    
-    sampling <<- high_value_items %>% 
-      bind_rows(sampling_remain)
-}
+if(!require(devtools)){install.packages("devtools")}
+if(!require(rsmsampling)){devtools::install_github("joy-hhh/rsmsampling");library(rsmsampling)}
+# ?mus_sampling
+# ?m_ran_sampling
+# ?ran_sampling
 ```
 
 
@@ -549,35 +478,56 @@ mus_sampling <- \(SR, RC, PL, PM, EA, pop, am){
 ```{r}
 SR <- "Yes"         ## or  "No"
 RC <- "Yes"         ## or  "No"
-PL <- "Analytical.Procedures.Not.Performed"     ## or  "High", "Low", "Moderate"
+PL <- 4             ## "Analytical.Procedures.Not.Performed" 4  ,    "High" 1, "Low" 2, "Moderate" 3 
 am <- "CR"          ## 금액열 지정
 
 ## 수행중요성 금액 및 허용오류율(5% 등) 입력
 PM <- 700000000     ## Tolerable misstatement (generally performance materiality)
-EA <- PM * 0.05    ## Expected misstatement
+EA <- 0.05          ## Expected misstatement
 ```
 
 
 * 모집단 filter 및 Sampling 수행
 
 ```{r}
-## Population
+## Define Population
 acc <- c("40100", "40401", "40700", "41100", "41200")  # 총 매출 계정 모음
 
-pop <- je_tbl %>% 
-  filter(ACCTCD %in% acc) %>% 
-  mutate(JENO = as.character(JENO))
+population <- je_tbl %>% 
+  filter(ACCTCD %in% acc)
 
 ## 함수 실행
-mus_sampling(SR, RC, PL, PM, EA, pop, am) # pop : 샘플링 대상 모집단
+sampling <- mus_sampling(population, am, SR, RC, PL, PM, EA) # population : 샘플링 대상 모집단
 
 ## 샘플링 내역 확인
 print(sampling, n = Inf)
 
 ## 추출된 샘플 엑셀 파일 생성
-sampling %>% write_xlsx("sample.xlsx")
-
+sampling %>% write_xlsx("MUS_sample.xlsx")
 ```
+
+
+## 매출액 Cut-off Test Sampling - C/O
+
+12월 매출액에 대하여 Cut-off 목적으로 Test Sampling
+
+```{r}
+## Define Population
+acc <- c("40100", "40401", "40700", "41100", "41200")  # 총 매출 계정 모음
+
+co_sampling <- je_tbl %>% 
+  filter(ACCTCD %in% acc) %>% 
+  filter(month == 12) %>% 
+  ran_sampling(30)
+
+## MUS sampling과 중복 항목 제거
+co_sampling <- co_sampling %>% 
+  filter(!JENO %in% sampling$JENO)
+
+co_sampling %>% write_xlsx("CO_sample.xlsx")
+```
+
+
 
 
 ## 분개장 전표에서 매출 계정별 원장 추출 - 엑셀로 저장
