@@ -476,7 +476,7 @@ if(!require(rsmsampling)){devtools::install_github("joy-hhh/rsmsampling");librar
 * Parameters Setting
 
 ```{r}
-SR <- "Yes"         ## or  "No"
+SR <- "No"          ## or  "Yes"
 RC <- "Yes"         ## or  "No"
 PL <- 4             ## "Analytical.Procedures.Not.Performed" 4  ,    "High" 1, "Low" 2, "Moderate" 3 
 am <- "CR"          ## 금액열 지정
@@ -523,6 +523,8 @@ co_sampling <- je_tbl %>%
 ## MUS sampling과 중복 항목 제거
 co_sampling <- co_sampling %>% 
   filter(!JENO %in% sampling$JENO)
+
+co_sampling
 
 co_sampling %>% write_xlsx("CO_sample.xlsx")
 ```
