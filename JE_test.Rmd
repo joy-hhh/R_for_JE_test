@@ -243,8 +243,7 @@ A03 %>% filter(Differ != 0)
 ### Lead Schedule xlsx 생성
    
 ```{r}
-amt_sum <- je_tbl %>% 
-  mutate_all(~replace(., is.na(.), 0)) %>% 
+amt_sum <- je_tbl %>%  
   summarise(
     DR_sum = sum(DR),
     CR_sum = sum(CR),
@@ -267,7 +266,7 @@ amt_sum %>% write_xlsx("lead_s.xlsx")
 ```{r}
 Corr_Acc = '40401'
 B09_main <- je_tbl %>% filter(ACCTCD == Corr_Acc) %>% 
-    select(JENO, ACCTCD, ACCT_NM)
+    select(JENO, ACCTCD)
 B09_Corr <- je_tbl %>% 
     select(JENO, ACCTCD)
 B09 <- semi_join(B09_Corr, B09_main, by = 'JENO')
@@ -478,7 +477,7 @@ if(!require(rsmsampling)){devtools::install_github("joy-hhh/rsmsampling");librar
 ```{r}
 SR <- "No"          ## or  "Yes"
 RC <- "Yes"         ## or  "No"
-PL <- 4             ## "Analytical.Procedures.Not.Performed" 4  ,    "High" 1, "Low" 2, "Moderate" 3 
+PL <- 4             ## "Analytical.Procedures.Not.Performed" 4, "High" 1, "Low" 2, "Moderate" 3 
 am <- "CR"          ## 금액열 지정
 
 ## 수행중요성 금액 및 허용오류율(5% 등) 입력
