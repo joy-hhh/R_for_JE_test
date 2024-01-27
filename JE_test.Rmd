@@ -546,4 +546,25 @@ je_tbl %>%
 
 
 
+```{python}
+import FinanceDataReader as fdr
+df = fdr.DataReader('005930', '2023-01-01', '2023-06-30')
+df = df.reset_index()
+# df.index.format   
+# <string>:1: FutureWarning: RangeIndex.format is deprecated and will be removed in a future version. Convert using index.astype(str) or index.map(formatter) instead.
+df.index.astype(str)
+```
+
+
+
+
+```{r}
+library(reticulate)
+
+fdr <- import("FinanceDataReader")
+df <- fdr$DataReader('005930', '2023-01-01', '2023-06-30')
+df
+
+py$df |> tibble::as_tibble()
+```
 
