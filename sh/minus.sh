@@ -18,5 +18,5 @@ column2="$5"
 
 # awk 명령어로 입력 파일에서 해당 조건을 만족하는 행을 찾아서 여섯번째 열의 값을 음수로 바꿉니다.
 # 그 결과를 출력 파일에 씁니다.
-awk -F'\t' -v c1="$column1" -v h="$h" -v c2="$column2" '$c1 == $h && $c2 ~ /^[0-9]+$/ { $c2 = -$c2 } 1' OFS='\t' "$input_file" > "$output_file"
+awk -F'\t' -v c1="$column1" -v h="$h" -v c2="$column2" '$c1 == h { $c2 = -$c2 } 1' OFS='\t' "$input_file" > "$output_file"
 
