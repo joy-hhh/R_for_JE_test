@@ -18,8 +18,8 @@ output_file="$6"
 
 
 temp_file="temp.txt"
-cat "$input_file" | grep "$regex1" > "temp_1.txt"
-cat "$input_file" | grep "$regex2" > "temp_2.txt"
+cat "$input_file" | grep -w "$regex1" > "temp_1.txt"
+cat "$input_file" | grep -w "$regex2" > "temp_2.txt"
 cut -f"$column2" "temp_1.txt" | sort -u > "temp_3.txt"
 cut -f"$column2" "temp_2.txt" | sort -u > "temp_4.txt"
 
