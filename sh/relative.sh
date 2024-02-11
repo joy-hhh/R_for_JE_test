@@ -20,7 +20,7 @@ temp_file="temp.txt"
 
 cut -f"$column2","$column1" "$input_file" > "$temp_file"
 
-cat "$temp_file" | grep "$regex1" > "temp_1.txt"
+cat "$temp_file" | grep -w "$regex1" > "temp_1.txt"
 cut -f"$column2" "temp_1.txt" > "temp_2.txt"
 sort -u "temp_2.txt" > "temp_3.txt"
 
