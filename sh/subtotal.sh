@@ -5,7 +5,7 @@ group="$2"
 amount="$3"
 output_file="$4"
 
-# 첫번째 열의 값과 여섯번째 열의 숫자를 공백으로 구분하여 잘라냅니다.
+
 cut -f $group,$amount $filename > temp.txt
 
 # 잘라낸 파일을 첫번째 열의 값으로 정렬합니다.
